@@ -1,0 +1,31 @@
+# Sekrety i konfiguracja lokalna
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Projekty i materiały użytkownika
+walkthrough-projects/
+source-images/
+generation-package/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+
+# Artefakty testowe i tymczasowe
+.tmp/
+tmp/
+*.tmp
+*.part
+
+# System i edytory
+.DS_Store
+._*
+*.swp
+*.swo
+.idea/
+.vscode/
