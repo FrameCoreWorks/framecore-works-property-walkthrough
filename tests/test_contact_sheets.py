@@ -6,7 +6,6 @@ import hashlib
 import json
 from pathlib import Path
 import struct
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -20,38 +19,7 @@ sys.path.insert(0, str(SCRIPTS))
 import _media  # noqa: E402
 import ingest_images  # noqa: E402
 import make_contact_sheet  # noqa: E402
-
-
-def _make_image(path: Path, *, source: str = "testsrc2", size: str = "120x80") -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if source == "testsrc2":
-        expression = "testsrc2=s={}:r=1".format(size)
-    else:
-        expression = "color=c={}:s={}:r=1".format(source, size)
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-hide_banner",
-            "-nostdin",
-            "-y",
-            "-v",
-            "error",
-            "-f",
-            "lavfi",
-            "-i",
-            expression,
-            "-frames:v",
-            "1",
-            "-update",
-            "1",
-            str(path),
-        ],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=True,
-        timeout=30,
-    )
+from tests._media_fixtures import make_image as _make_image  # noqa: E402
 
 
 def _inject_orientation(jpeg_path: Path, orientation: int) -> None:

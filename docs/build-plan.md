@@ -14,12 +14,12 @@
 
 ```text
 P1A scaffold
-→ P15 autorytatywna licencja upstream
+→ P15 clean-room i referencja koncepcyjna
 → P1B walidacja fundamentu
 → pierwszy lokalny commit
-→ P16 prywatny GitHub i bezpieczny origin
+→ P16 publiczny GitHub i bezpieczny origin
 → P17 checkpoint loop dla P2–P12
-→ P13 instalacja exact-SHA
+→ P13 instalacja Codex Native
 → P14A dokładne pytanie i oczekiwanie
 → P14B onboarding tylko wskazanego dostawcy
 → P18 finalny audit
@@ -33,30 +33,30 @@ Każda faza zapisuje: cel, opis, pliki, zależności, skrypty, testy, polecenia 
 
 - Cel: utworzyć nowy katalog bez historii upstream i utrwalić zatwierdzony projekt.
 - Pliki: `docs/design-synthesis.md`, `docs/build-plan.md`, `docs/clean-room-ledger.md`, szkielet katalogów.
-- Zależności: Hipson Checkpoint 3 PASS, preflight `/Volumes/Codex/Codex`.
+- Zależności: Hipson Checkpoint 3 PASS oraz zweryfikowany kanoniczny workspace Codexa.
 - Testy: brak istniejącego targetu lokalnego, brak `.git`, brak zdalnych obiektów upstream.
 - Walidacja: `find`, `git status` oczekiwane jako non-repo przed `git init`.
 - Ryzyko: przypadkowe użycie starego working tree.
 - Ukończenie: dokumenty są zapisane w nowym katalogu, a ledger potwierdza clean-room.
 - Downstream: P15.
 
-## P15. Autorytatywna licencja upstream
+## P15. Clean-room i referencja koncepcyjna
 
-- Cel: przypiąć dokładną rewizję i zachować verbatim tekst MIT.
-- Pliki: `licenses/re-walkthrough-pro-MIT.txt`, `THIRD_PARTY_NOTICES.md`, `docs/clean-room-ledger.md`.
+- Cel: udokumentować projekt referencyjny bez kopiowania jego materiałów.
+- Pliki: `README.md`, `docs/clean-room-ledger.md`.
 - Zależności: dostęp do publicznego upstream.
-- Metoda: pobrać przez immutable commit URL, zapisać branch, commit SHA, datę, blob SHA i SHA-256 bajtów.
-- Testy: dokładne bajty licencji odpowiadają przypiętemu blobowi; copyright Charles J Dove zachowany.
-- Ryzyko: zmienny branch albo niepełna kopia.
-- Ukończenie: źródło jest immutable i dowód zapisany.
+- Metoda: zapisać nazwę projektu, autora, URL, rolę koncepcyjną i brak skopiowanych materiałów.
+- Testy: README zawiera atrybucję; repo nie zawiera kodu, licencji, assetów ani historii upstream.
+- Ryzyko: sformułowanie sugerujące fork, afiliację albo skopiowaną implementację.
+- Ukończenie: ledger jest kompletny, a repo zawiera wyłącznie własny rootowy `LICENSE`.
 - Downstream: P1B.
 
 ## P1B. Fundament repo i skilla
 
 - Cel: utworzyć foundation files, licencję FrameCore Works i standardowy scaffold skilla.
-- Pliki: `README.md`, `AGENTS.md`, `LICENSE`, `.gitignore`, `.env.example`, `THIRD_PARTY_NOTICES.md`, `skills/create-property-walkthrough/**`.
+- Pliki: `README.md`, `AGENTS.md`, `LICENSE`, `.gitignore`, `.env.example`, `skills/create-property-walkthrough/**`.
 - Skrypty: systemowy `init_skill.py`, następnie dostosowanie przez patch.
-- Testy: root MIT, upstream MIT, frontmatter, `agents/openai.yaml`, UTF-8, brak sekretów, brak upstream Git history.
+- Testy: root MIT, atrybucja koncepcyjna, frontmatter, `agents/openai.yaml`, UTF-8, brak sekretów i materiałów upstream.
 - Walidacja: `quick_validate.py`, testy foundation, secret scan.
 - Ryzyko: placeholdery albo niezgodny format skilla.
 - Ukończenie: foundation validation przechodzi i powstaje pierwszy polski commit.
@@ -94,10 +94,10 @@ Każda faza zapisuje: cel, opis, pliki, zależności, skrypty, testy, polecenia 
 
 ## P5. Contact sheets i analiza
 
-- Cel: utworzyć deterministyczne miniatury/contact sheets i kontrakt analizy Codexa.
-- Pliki: `make_contact_sheet.py`, `image-analysis.schema.json`, reference image curation.
-- Testy: JPEG/PNG, orientacja, FFmpeg, polskie ścieżki, brak destrukcyjnego usuwania.
-- Walidacja: `python -m unittest tests.test_contact_sheets`.
+- Cel: utworzyć deterministyczne miniatury/contact sheets, kontrakt analizy Codexa i atomowo zastosować wynik do głównego manifestu.
+- Pliki: `make_contact_sheet.py`, `apply_image_analysis.py`, `image-analysis.schema.json`, reference image curation.
+- Testy: JPEG/PNG, orientacja, FFmpeg, polskie ścieżki, brak destrukcyjnego usuwania, spójność ingestionu i analizy, brak ręcznej edycji `project.json`.
+- Walidacja: `python -m unittest tests.test_contact_sheets tests.test_apply_image_analysis`.
 - Ryzyko: brak FFmpeg lub niedekodowalny obraz.
 - Ukończenie: raport i contact sheet są gotowe do wizualnej oceny.
 - Downstream: P6.
@@ -172,14 +172,14 @@ Każda faza zapisuje: cel, opis, pliki, zależności, skrypty, testy, polecenia 
 - Ukończenie: cały suite przechodzi w czystym tempdir.
 - Downstream: P13 i checkpoint finalny implementacji.
 
-## P13. Instalacja exact-SHA
+## P13. Instalacja Codex Native
 
-- Cel: zainstalować dokładnie przetestowany skill.
-- Pliki: lokalny installation attestation i hash manifest; sam skill poza repo po instalacji.
-- Metoda: same-filesystem staging, kontrola hashy, `quick_validate.py`, atomic rename.
-- Testy: clean `CODEX_HOME`, kolizja, interrupted staging, hash equality, smoke validation.
-- Ryzyko: nadpisanie istniejącego skilla albo instalacja innej rewizji.
-- Ukończenie: `$CODEX_HOME/skills/create-property-walkthrough` odpowiada testowanemu commitowi.
+- Cel: zapewnić instalację skilla bezpośrednio przez Codexa z repozytorium GitHub.
+- Pliki: `skills/create-property-walkthrough` oraz instrukcja instalacji w `README.md`.
+- Metoda: użytkownik przekazuje Codexowi URL repozytorium, a Codex instaluje odnaleziony skill.
+- Testy: poprawna struktura skilla, `quick_validate.py` oraz zgodność instrukcji README z modelem Codex Native.
+- Ryzyko: brak wykrycia katalogu skilla albo kolizja z istniejącą instalacją.
+- Ukończenie: Codex rozpoznaje i instaluje `create-property-walkthrough` z podanego repozytorium.
 - Downstream: P14A.
 
 ## P14A. Dokładne pytanie o dostawcę
@@ -198,13 +198,13 @@ Każda faza zapisuje: cel, opis, pliki, zależności, skrypty, testy, polecenia 
 - Ukończenie: profil zwalidowany albo status `blocked` z konkretnym brakiem. `blocked` nie oznacza completion.
 - Downstream: P18.
 
-## P16. GitHub private create albo safe resume
+## P16. GitHub create albo safe resume
 
 - Cel: utworzyć lub bezpiecznie kontynuować dokładny target.
-- Preflight: `gh auth status`, login `FrameCoreWorks`, target owner/name, visibility private, `isFork=false`, branches/history, remote head.
-- Testy: zły login, public/fork target, istniejąca zawartość, remote mismatch, non-fast-forward, secret scan failure.
-- Ryzyko: zmiana obcego projektu albo nieprywatny remote.
-- Ukończenie: origin wskazuje dokładny private target, initial validated commit jest na remote i remote SHA jest zgodny.
+- Preflight: `gh auth status`, login `FrameCoreWorks`, target owner/name, oczekiwana widoczność, `isFork=false`, branches/history, remote head.
+- Testy: zły login, błędna widoczność, fork target, istniejąca zawartość, remote mismatch, non-fast-forward, secret scan failure.
+- Ryzyko: zmiana obcego projektu albo niezgodna widoczność remote.
+- Ukończenie: origin wskazuje dokładny target dystrybucyjny, initial validated commit jest na remote i remote SHA jest zgodny.
 - Downstream: P17.
 
 ## P17. Checkpoint commit/push loop
@@ -219,7 +219,7 @@ Każda faza zapisuje: cel, opis, pliki, zależności, skrypty, testy, polecenia 
 ## P18. Finalny audit i handover
 
 - Cel: porównać stan z Definition of Done bez fałszywego PASS.
-- Testy: pełny suite, skill validation, license hash, secret/history scan, install hashes, local/remote SHA, private/non-fork, język polski, AppleDouble scan.
+- Testy: pełny suite, skill validation, license hash, secret/history scan, local/remote SHA, oczekiwana widoczność/non-fork, język polski, AppleDouble scan.
 - Statusy: `complete` tylko przy spełnieniu wszystkich obowiązkowych kryteriów; `blocked` przy rzeczywistym zewnętrznym blockerze.
 - Ukończenie: 35-punktowy handover po polsku i brak wymaganej bezpiecznej poprawki.
 
@@ -228,7 +228,7 @@ Każda faza zapisuje: cel, opis, pliki, zależności, skrypty, testy, polecenia 
 | ID | Wymaganie | Faza | Artefakt | Test lub dowód | Kryterium ukończenia |
 |---|---|---|---|---|---|
 | R001 | Projekt od początku, bez forka | P1A/P16 | clean-room ledger, Git | brak upstream remote/objects, `isFork=false` | nowa historia |
-| R002 | Jeden instalowalny skill | P1B/P13 | `skills/create-property-walkthrough` | quick validate, install hash | skill działa |
+| R002 | Jeden instalowalny skill | P1B/P13 | `skills/create-property-walkthrough` | quick validate, instalacja Codex Native | skill działa |
 | R003 | Brak aplikacji/API/DB | P1B/P18 | struktura repo | tree audit | brak komponentów poza zakresem |
 | R004 | Pięć trybów wejścia | P4 | ingestion scripts | unit + E2E | każdy tryb zapisuje projekt |
 | R005 | Polska i publiczne listingi | P2/P4 | references, HTML fixtures | JSON-LD/OG/Unicode | dane z provenance/null |
@@ -246,8 +246,8 @@ Każda faza zapisuje: cel, opis, pliki, zależności, skrypty, testy, polecenia 
 | R017 | Approved clips zachowane | P9/P11 | revisions/hashes | overwrite regression | immutable approved |
 | R018 | Selective regeneration | P9/P11 | dependency hashes | single-scene invalidation | tylko właściwa scena |
 | R019 | Synthetic fixtures | P4/P12 | `tests/fixtures` | asset audit | brak realnych listingów |
-| R020 | Oddzielne licencje MIT | P15/P1B | LICENSE + licenses | byte/hash tests | oba copyrighty poprawne |
-| R021 | Konceptualna relacja upstream | P15/P1B | notices/README | exact wording test | brak endorsementu |
+| R020 | Własna licencja MIT | P15/P1B | rootowy LICENSE | copyright test | wyłącznie licencja FrameCore Works |
+| R021 | Konceptualna relacja upstream | P15/P1B | README | exact wording test | atrybucja bez kopii i endorsementu |
 | R022 | Repo i treści po polsku | wszystkie/P18 | wszystkie user docs | language/UTF-8 audit | wymagane treści PL |
 | R023 | Prompty EN + metadata PL | P6 | prompt package | schema/text tests | spójny prompt i metadata |
 | R024 | Unicode w ścieżkach/outputach | P3–P12 | fixtures | `łazienka_żółta` E2E | pełny PASS |
@@ -273,8 +273,8 @@ Każda faza zapisuje: cel, opis, pliki, zależności, skrypty, testy, polecenia 
 | R044 | Render 9:16 bez stretch | P10/P12 | final MP4 | ffprobe/crop strategy | 1080×1920, SAR 1:1 |
 | R045 | Brak automatycznych dodatków/PII | P10 | render config | config/text tests | brak audio/overlay default |
 | R046 | Pełny provider-free E2E | P12 | synthetic project | socket deny/provider trap | zero external calls |
-| R047 | Exact-SHA bezpieczna instalacja | P13 | install attestation | staging/collision/hash | zainstalowany tested tree |
-| R048 | GitHub FrameCoreWorks/private | P16 | remote metadata | gh owner/visibility/fork | dokładny private target |
+| R047 | Instalacja Codex Native | P13 | repozytorium i skill | URL repo, quick validate | skill instalowany przez Codexa |
+| R048 | GitHub FrameCoreWorks/public | P16 | remote metadata | gh owner/visibility/fork | dokładny publiczny target dystrybucyjny |
 | R049 | Tylko tested checkpoint push | P17 | checkpoint log | commands/tree SHA/remote SHA | każdy push attested |
 | R050 | Secret/user-asset/history scan | P17/P18 | scan logs | canary, path, git object scan | brak zakazanych danych |
 | R051 | Goal Completion Loop i handover | wszystkie/P18 | plan, log, raport | DoD audit | complete albo prawdziwy blocker |

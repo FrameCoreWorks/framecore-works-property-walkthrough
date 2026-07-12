@@ -18,6 +18,8 @@ if str(SCRIPTS_DIR) not in sys.path:
 from _common import load_json, sha256_file  # noqa: E402
 from import_clips import import_clip, record_quality_control  # noqa: E402
 from render_walkthrough import (  # noqa: E402
+    RenderError,
+    _ffconcat_escape,
     _simple_filter,
     render_walkthrough,
 )
@@ -59,6 +61,8 @@ def prepare_approved_project(
             int(record["revision"]),
             "approved",
             notes_pl="Syntetyczny klip testowy zgodny ze źródłem.",
+            source_comparison_performed=True,
+            comparison_evidence_pl="Porównano syntetyczne próbki ze źródłem.",
         )
     return project_root
 
@@ -156,6 +160,8 @@ class RenderingTests(unittest.TestCase):
         )
         self.assertIn("force_original_aspect_ratio=decrease", _simple_filter(1080, 1920, "contain", 30))
         self.assertIn("force_original_aspect_ratio=increase", _simple_filter(1080, 1920, "anchored_crop", 30))
+        self.assertIn("crop=1080:1920:0:(ih-oh)/2", _simple_filter(1080, 1920, "anchored_crop", 30, "left"))
+        self.assertIn("crop=1080:1920:iw-ow:(ih-oh)/2", _simple_filter(1080, 1920, "anchored_crop", 30, "right"))
 
     def test_current_render_is_skipped_without_changing_file(self) -> None:
         project_root = prepare_approved_project(self.base, scene_count=1)
@@ -170,6 +176,13 @@ class RenderingTests(unittest.TestCase):
         for target, result in second["targets"].items():
             self.assertTrue(result["skipped_as_current"])
             self.assertEqual(hashes[target], sha256_file(project_root / result["path"]))
+
+    def test_lista_concat_uzywa_wylacznie_wzglednych_nazw(self) -> None:
+        self.assertEqual("scene-001.mp4", _ffconcat_escape("scene-001.mp4"))
+        with self.assertRaises(RenderError):
+            _ffconcat_escape("C:/projekt/scene-001.mp4")
+        with self.assertRaises(RenderError):
+            _ffconcat_escape("../scene-001.mp4")
 
 
 if __name__ == "__main__":

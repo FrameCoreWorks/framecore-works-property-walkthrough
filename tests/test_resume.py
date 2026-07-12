@@ -53,6 +53,16 @@ class ResumeTests(unittest.TestCase):
         self.assertEqual(0, report["provider_calls"])
         self.assertFalse(report["automatic_submission_allowed"])
 
+    def test_render_z_niestandardowym_fps_pozostaje_aktualny(self) -> None:
+        project_root = prepare_approved_project(self.base, scene_count=1)
+        rendered = render_walkthrough(project_root, fps=24)
+
+        report = analyze_resume(project_root)
+
+        self.assertEqual(24, rendered["targets"]["16x9"]["fps"])
+        self.assertEqual(["16x9"], report["render_validation"]["valid_targets"])
+        self.assertEqual([], report["render_validation"]["stale_targets"])
+
     def test_changed_scene_invalidates_only_its_clip_and_preserves_other_approval(self) -> None:
         project_root = prepare_approved_project(self.base, scene_count=2)
         before = load_json(project_root / "project.json")

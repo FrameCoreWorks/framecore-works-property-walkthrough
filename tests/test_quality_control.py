@@ -21,7 +21,11 @@ from import_clips import (  # noqa: E402
     import_clip,
     record_quality_control,
 )
-from render_walkthrough import compute_render_dependency_hash  # noqa: E402
+from render_walkthrough import (  # noqa: E402
+    RenderError,
+    compute_render_dependency_hash,
+    render_walkthrough,
+)
 from tests.test_scene_planning import (  # noqa: E402
     make_synthetic_clip,
     prepare_synthetic_project,
@@ -88,6 +92,8 @@ class QualityControlTests(unittest.TestCase):
             1,
             "approved",
             notes_pl="Geometria i ruch są stabilne.",
+            source_comparison_performed=True,
+            comparison_evidence_pl="Porównano pięć próbek z zaakceptowanym zdjęciem źródłowym.",
         )
 
         project = load_json(self.project_root / "project.json")
@@ -106,6 +112,42 @@ class QualityControlTests(unittest.TestCase):
         self.assertEqual(project["stages"]["quality_control"], "complete")
         self.assertEqual(project["stages"]["rendering"], "invalidated")
         self.assertEqual(project["output"]["render_status"], "invalidated")
+
+        report = load_json(
+            self.project_root
+            / "reports"
+            / "qc"
+            / self.scene_id
+            / "rev-001"
+            / "review.json"
+        )
+        self.assertTrue(report["source_comparison_performed"])
+        self.assertIn("pięć próbek", report["comparison_evidence_pl"])
+
+    def test_status_nie_udaje_porownania_ze_zrodlem(self) -> None:
+        report = record_quality_control(
+            self.project_root,
+            self.scene_id,
+            1,
+            "approved",
+        )
+
+        self.assertFalse(report["source_comparison_performed"])
+        self.assertEqual("", report["comparison_evidence_pl"])
+        project = load_json(self.project_root / "project.json")
+        self.assertEqual("pending", project["stages"]["quality_control"])
+        with self.assertRaisesRegex(RenderError, "porównania ze zdjęciem źródłowym"):
+            render_walkthrough(self.project_root)
+
+    def test_porownanie_wymaga_opisu_dowodu(self) -> None:
+        with self.assertRaisesRegex(ClipImportError, "opisu dowodu"):
+            record_quality_control(
+                self.project_root,
+                self.scene_id,
+                1,
+                "approved",
+                source_comparison_performed=True,
+            )
 
     def test_zmiana_pliku_po_imporcie_blokuje_akceptacje(self) -> None:
         imported = self.project_root / self.first["path"]
@@ -128,6 +170,8 @@ class QualityControlTests(unittest.TestCase):
             self.scene_id,
             1,
             "approved",
+            source_comparison_performed=True,
+            comparison_evidence_pl="Porównano próbki ze źródłem.",
         )
         project = load_json(self.project_root / "project.json")
         project["output"] = {
@@ -185,6 +229,8 @@ class QualityControlTests(unittest.TestCase):
             self.scene_id,
             2,
             "approved",
+            source_comparison_performed=True,
+            comparison_evidence_pl="Porównano próbki ze źródłem.",
         )
         approved = load_json(self.project_root / "project.json")
         new_selection = approved["qc"][self.scene_id]

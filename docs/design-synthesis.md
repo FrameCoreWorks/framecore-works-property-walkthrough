@@ -50,11 +50,13 @@ FrameCore Works Property Walkthrough to niezależnie opracowany skill Codexa, ko
 
 RE Walkthrough Pro autorstwa Charlesa J. Dove'a służył jako referencja koncepcyjna i architektoniczna dla workflow tworzenia walkthrough nieruchomości z osobnych klipów pomieszczeń. FrameCore Works Property Walkthrough został zaimplementowany niezależnie od początku dla Codexa i nie zawiera historii Git oryginalnego repozytorium.
 
-Repozytorium upstream nie jest używane jako working tree. Do nowego repo nie zostaną przeniesione jego obiekty Git ani historia. Kopiowany verbatim jest wyłącznie wymagany tekst licencji MIT, po weryfikacji z przypiętej rewizji. Każde ewentualne późniejsze zapożyczenie musi trafić do clean-room ledger i `THIRD_PARTY_NOTICES.md`.
+Repozytorium upstream nie jest używane jako working tree. Do nowego repo nie zostaną przeniesione jego obiekty Git, historia, kod, dokumentacja ani plik licencji. README zachowuje opisową atrybucję źródła wiedzy i inspiracji koncepcyjnej. Każde ewentualne późniejsze zapożyczenie wymaga osobnej analizy licencyjnej przed włączeniem.
 
 ## Architektura skill-first
 
 Repozytorium zawiera jeden główny skill i małe deterministyczne narzędzia. `SKILL.md` przechowuje rdzeń workflow i routing do references. Szczegóły domenowe są ładowane progresywnie. Skrypty nie podejmują decyzji kreatywnych i nie uruchamiają dostawców bez jawnych danych oraz bramek.
+
+Implementacja zachowuje jeden kontrakt Codex Native na macOS i Windows. Operacje plikowe, blokady projektu, ścieżki tymczasowe i uruchamianie helperów nie mogą zakładać mechanizmów dostępnych tylko w jednym systemie.
 
 Planowana struktura:
 
@@ -63,7 +65,6 @@ framecore-works-property-walkthrough/
 ├── README.md
 ├── AGENTS.md
 ├── LICENSE
-├── THIRD_PARTY_NOTICES.md
 ├── .gitignore
 ├── .env.example
 ├── docs/
@@ -71,8 +72,6 @@ framecore-works-property-walkthrough/
 │   ├── build-plan.md
 │   ├── clean-room-ledger.md
 │   └── checkpoint-log.md
-├── licenses/
-│   └── re-walkthrough-pro-MIT.txt
 ├── skills/create-property-walkthrough/
 │   ├── SKILL.md
 │   ├── agents/openai.yaml
@@ -84,7 +83,7 @@ framecore-works-property-walkthrough/
     └── synthetic-project/
 ```
 
-Nie powstaje `requirements.txt`, ponieważ implementacja używa wyłącznie biblioteki standardowej Pythona. Zewnętrznym wymaganiem systemowym jest FFmpeg z `ffprobe`. Minimalny runtime to Python 3.9+, a testy i instalacja referencyjna używają Pythona 3.11.
+Nie powstaje `requirements.txt`, ponieważ implementacja używa wyłącznie biblioteki standardowej Pythona. Szczegóły wykonawcze helperów pozostają częścią działania skilla zarządzanego przez Codexa, a nie osobną ścieżką instalacji użytkownika.
 
 ## Model stanu projektu
 
@@ -163,7 +162,7 @@ Prompty zachowują geometrię i zawartość kadru, blokują nowe otwory, pokoje,
 
 ## Onboarding dostawcy
 
-Przed instalacją i dokładnym pytaniem nie wolno skanować, wyświetlać ani sugerować dostawców. Po instalacji Codex zadaje jedno wymagane pytanie bez przykładów i czeka.
+Przed dokładnym pytaniem nie wolno skanować, wyświetlać ani sugerować dostawców. Przy pierwszym użyciu po instalacji Codex zadaje jedno wymagane pytanie bez przykładów i czeka.
 
 Po odpowiedzi sprawdzana jest wyłącznie dokładna nazwa i metoda `MCP` albo `API`. Walidacja używa oficjalnej dokumentacji oraz nie wykonuje generacji ani testowego uploadu.
 
@@ -214,11 +213,11 @@ Resume zaczyna od `project.json`, sprawdza schemat, pliki i hashe, zachowuje pop
 
 ## Instalacja
 
-Instalowany jest dokładnie przetestowany commit. Skill trafia najpierw do stagingu na tym samym filesystemie co `$CODEX_HOME/skills`, przechodzi kontrolę hashy i `quick_validate.py`, a następnie jest publikowany atomowym rename. Istniejący katalog o tym samym slugu jest bezpiecznym STOP, nie jest nadpisywany.
+Skill jest instalowany natywnie przez Codexa po przekazaniu adresu repozytorium GitHub. Repozytorium nie dostarcza ani nie opisuje alternatywnego instalatora.
 
 ## GitHub
 
-Lokalne repo ma nową historię Git i wyłącznie origin do `FrameCoreWorks/framecore-works-property-walkthrough`. Target musi być private, non-fork i należeć do `FrameCoreWorks`. Istniejący target można kontynuować tylko, jeśli jest tym samym clean-room projektem, zachowuje bezpieczne pochodzenie i pozwala na fast-forward bez naruszania zawartości. Każda niepewność lub konflikt zatrzymuje push.
+Lokalne repo ma nową historię Git i wyłącznie origin do `FrameCoreWorks/framecore-works-property-walkthrough`. Publiczny target jest repozytorium dystrybucyjnym skilla, musi być non-fork i należeć do `FrameCoreWorks`. Istniejący target można kontynuować tylko, jeśli jest tym samym clean-room projektem, zachowuje bezpieczne pochodzenie i pozwala na fast-forward bez naruszania zawartości. Każda niepewność lub konflikt zatrzymuje push.
 
 Checkpoint jest pushowany dopiero po testach, secret scan, asset scan i czystym diffie. SHA checkpointu jest zapisywany w następnym checkpointcie, a finalny SHA w handoverze, aby uniknąć samoodnoszącego commita.
 
@@ -226,7 +225,7 @@ Checkpoint jest pushowany dopiero po testach, secret scan, asset scan i czystym 
 
 Testy używają `unittest`, tymczasowych katalogów i syntetycznych JPEG/PNG oraz lokalnych klipów FFmpeg. Provider-free E2E uruchamia helpery z blokadą socketów i providerem-pułapką. Licznik zewnętrznych wywołań musi pozostać równy zero.
 
-Zakres obejmuje strukturę skilla, aktywację, schematy, ZIP, pliki uszkodzone, Unicode, HTML fixtures, provenance, deduplikację, contact sheets, sceny, prompty, provider profile, dokładne pytania, sekrety, zgody, cost gate, manual mode, import, FFmpeg, resume, selektywną regenerację, licencje, clean-room, GitHub identity i instalację exact-SHA.
+Zakres obejmuje strukturę skilla, aktywację, schematy, ZIP, pliki uszkodzone, Unicode, HTML fixtures, provenance, deduplikację, contact sheets, sceny, prompty, provider profile, dokładne pytania, sekrety, zgody, cost gate, manual mode, import, FFmpeg, resume, selektywną regenerację, licencje, clean-room, GitHub identity i instalację Codex Native.
 
 ## Ryzyka i ograniczenia
 
@@ -250,7 +249,7 @@ Zakres obejmuje strukturę skilla, aktywację, schematy, ZIP, pliki uszkodzone, 
 - ograniczony jawny podzbiór JSON Schema,
 - provider-neutral profile poza repo i manual mode,
 - hermetyczny E2E z zerowym ruchem sieciowym,
-- exact-SHA instalacja i checkpoint attestation bez rekurencyjnego SHA.
+- natywna instalacja skilla przez Codexa z repozytorium GitHub.
 
 ## Rekomendacje odrzucone lub odłożone
 

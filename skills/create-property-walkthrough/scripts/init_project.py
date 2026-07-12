@@ -99,6 +99,9 @@ class ProjectInitializationPostCommitError(ProjectInitializationError):
 def _fsync_directory(directory: Path) -> None:
     """Utrwal publikację katalogu projektu na obsługiwanym filesystemie."""
 
+    if os.name == "nt":
+        return
+
     flags = os.O_RDONLY
     if hasattr(os, "O_DIRECTORY"):
         flags |= os.O_DIRECTORY
@@ -205,6 +208,7 @@ def _initial_manifest(
             "SOURCE.md": source_note_hash,
             "provider/provider-profile.snapshot.json": snapshot_hash,
         },
+        "assets": {},
         "classifications": {},
         "selected_images": [],
         "scene_plan": {"revision": 0, "scenes": [], "tombstones": []},

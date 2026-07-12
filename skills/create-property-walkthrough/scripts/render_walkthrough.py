@@ -32,6 +32,7 @@ TARGETS = {
     "9x16": {"width": 1080, "height": 1920, "filename": "walkthrough-9x16.mp4"},
 }
 VERTICAL_STRATEGIES = ("anchored_crop", "contain", "padded_background")
+VERTICAL_ANCHORS = ("center", "left", "right", "top", "bottom")
 DEFAULT_FPS = 30
 
 
@@ -65,6 +66,10 @@ def _approved_clip(
     selection = qc.get(scene_id)
     if not isinstance(selection, dict) or selection.get("status") != "approved":
         raise RenderError(f"Scena {scene_id} nie ma zatwierdzonego klipu.")
+    if selection.get("source_comparison_performed") is not True:
+        raise RenderError(
+            f"Scena {scene_id} nie ma potwierdzonego porównania ze zdjęciem źródłowym."
+        )
     clip_id = selection.get("selected_clip_id")
     clips = project.get("clips")
     if not isinstance(clips, list):
@@ -148,6 +153,11 @@ def compute_render_dependency_hash(
                     "vertical_strategy": (
                         scene.get("vertical_strategy") if target == "9x16" else "contain"
                     ),
+                    "vertical_anchor": (
+                        scene.get("vertical_anchor", "center")
+                        if target == "9x16"
+                        else "center"
+                    ),
                 }
                 for scene, clip in inputs
             ],
@@ -155,8 +165,14 @@ def compute_render_dependency_hash(
     )
 
 
-def _simple_filter(width: int, height: int, strategy: str, fps: int) -> str:
-    """Buduje filtr zachowujący proporcje dla contain albo centralnego cropu."""
+def _simple_filter(
+    width: int,
+    height: int,
+    strategy: str,
+    fps: int,
+    anchor: str = "center",
+) -> str:
+    """Buduje filtr zachowujący proporcje dla contain albo cropu z kotwicą."""
 
     if strategy == "contain":
         return (
@@ -165,9 +181,19 @@ def _simple_filter(width: int, height: int, strategy: str, fps: int) -> str:
             f"setsar=1,fps={fps},format=yuv420p"
         )
     if strategy == "anchored_crop":
+        anchors = {
+            "center": ("(iw-ow)/2", "(ih-oh)/2"),
+            "left": ("0", "(ih-oh)/2"),
+            "right": ("iw-ow", "(ih-oh)/2"),
+            "top": ("(iw-ow)/2", "0"),
+            "bottom": ("(iw-ow)/2", "ih-oh"),
+        }
+        if anchor not in anchors:
+            raise RenderError("Niepoprawna kotwica kadrowania pionowego.")
+        x_offset, y_offset = anchors[anchor]
         return (
             f"scale={width}:{height}:force_original_aspect_ratio=increase:flags=lanczos,"
-            f"crop={width}:{height}:(iw-ow)/2:(ih-oh)/2,"
+            f"crop={width}:{height}:{x_offset}:{y_offset},"
             f"setsar=1,fps={fps},format=yuv420p"
         )
     raise RenderError("Niepoprawna prosta strategia kadrowania.")
@@ -181,6 +207,7 @@ def _normalize_clip(
     height: int,
     strategy: str,
     fps: int,
+    anchor: str = "center",
 ) -> None:
     """Normalizuje jeden klip bez rozciągania i bez mapowania audio."""
 
@@ -196,7 +223,7 @@ def _normalize_clip(
                 "-map",
                 "0:v:0",
                 "-vf",
-                _simple_filter(width, height, strategy, fps),
+                _simple_filter(width, height, strategy, fps, anchor),
                 "-an",
                 "-c:v",
                 "libx264",
@@ -254,10 +281,12 @@ def _normalize_clip(
     )
 
 
-def _ffconcat_escape(path: Path) -> str:
-    """Escapuje pojedynczy lokalny path dla demuxera concat."""
+def _ffconcat_escape(path: str) -> str:
+    """Escapuje względną nazwę pliku dla demuxera concat."""
 
-    return path.as_posix().replace("'", "'\\''")
+    if Path(path).name != path or path in {"", ".", ".."}:
+        raise RenderError("Lista concat wymaga bezpiecznej względnej nazwy pliku.")
+    return path.replace("'", "'\\''")
 
 
 def _probe_output(path: Path, width: int, height: int, fps: int) -> Dict[str, Any]:
@@ -348,6 +377,11 @@ def _render_target(
                         raise RenderError(
                             f"Scena {scene.get('scene_id')} wymaga jawnej strategii 9:16."
                         )
+                anchor = str(scene.get("vertical_anchor", "center"))
+                if anchor not in VERTICAL_ANCHORS:
+                    raise RenderError(
+                        f"Scena {scene.get('scene_id')} ma niepoprawną kotwicę 9:16."
+                    )
                 intermediate = work_dir / f"scene-{index:03d}.mp4"
                 _normalize_clip(
                     Path(clip["resolved_path"]),
@@ -356,12 +390,13 @@ def _render_target(
                     height=height,
                     strategy=strategy,
                     fps=fps,
+                    anchor=anchor,
                 )
                 normalized.append(intermediate)
             concat_path = work_dir / "concat.txt"
             with concat_path.open("w", encoding="utf-8", newline="\n") as handle:
                 for path in normalized:
-                    handle.write(f"file '{_ffconcat_escape(path)}'\n")
+                    handle.write(f"file '{_ffconcat_escape(path.name)}'\n")
                 handle.flush()
                 os.fsync(handle.fileno())
             run_ffmpeg(
@@ -396,6 +431,7 @@ def _render_target(
         "sha256": sha256_file(destination),
         "dependency_hash": dependency_hash,
         "target": target,
+        "fps": fps,
         "transition": "hard_cut",
         "audio_added": False,
         "pii_overlays_added": False,

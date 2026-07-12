@@ -8,7 +8,6 @@ from pathlib import Path
 import shutil
 import stat
 import struct
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -22,34 +21,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 import ingest_images as ingestion  # noqa: E402
 from _common import ProjectStateError  # noqa: E402
-
-
-def _make_image(path: Path, *, color: str = "red", size: str = "96x64") -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-hide_banner",
-            "-nostdin",
-            "-y",
-            "-v",
-            "error",
-            "-f",
-            "lavfi",
-            "-i",
-            "color=c={}:s={}:r=1".format(color, size),
-            "-frames:v",
-            "1",
-            "-update",
-            "1",
-            str(path),
-        ],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=True,
-        timeout=30,
-    )
+from tests._media_fixtures import make_image as _make_image  # noqa: E402
 
 
 def _zip(path: Path, entries: list[tuple[str, bytes]], *, compression: int = zipfile.ZIP_DEFLATED) -> None:
@@ -73,8 +45,31 @@ def _mark_zip_encrypted(path: Path) -> None:
     path.write_bytes(data)
 
 
+def _zip_with_backslash(path: Path, payload: bytes) -> None:
+    """Utwórz ZIP z backslashem niezależnie od normalizacji hosta Windows."""
+
+    portable_name = b"folder/atak.png"
+    unsafe_name = b"folder\\atak.png"
+    _zip(path, [(portable_name.decode("ascii"), payload)])
+    data = path.read_bytes()
+    if data.count(portable_name) != 2:
+        raise AssertionError("Fixture ZIP nie ma oczekiwanych dwóch nagłówków nazwy.")
+    path.write_bytes(data.replace(portable_name, unsafe_name))
+
+
 class IngestionTests(unittest.TestCase):
     """Każde wejście przechodzi przez kwarantannę i limity fail-closed."""
+
+    def test_zip_sprawdza_surowa_nazwe_sprzed_normalizacji_windows(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ingest-zip-orig-") as temporary:
+            archive_path = Path(temporary) / "backslash.zip"
+            _zip_with_backslash(archive_path, b"fixture")
+
+            with zipfile.ZipFile(archive_path, "r") as archive:
+                info = archive.infolist()[0]
+                info.filename = "folder/atak.png"
+                with self.assertRaises(ingestion.IngestionError):
+                    ingestion._validate_zip_entries(archive, ingestion.IngestionLimits())
 
     def test_pojedynczy_plik_i_polska_sciezka_zachowuja_original(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ingest-łódź-") as temporary:
@@ -204,7 +199,7 @@ class IngestionTests(unittest.TestCase):
                 [
                     ("traversal", normal("traversal", [("dobry.png", safe_bytes), ("../ucieczka.png", safe_bytes)])),
                     ("absolute", normal("absolute", [("/tmp/atak.png", safe_bytes)])),
-                    ("backslash", normal("backslash", [("folder\\atak.png", safe_bytes)])),
+                    ("backslash", lambda path: _zip_with_backslash(path, safe_bytes)),
                     ("nested", normal("nested", [("dobry.png", safe_bytes), ("inner.zip", inner_buffer.getvalue())])),
                     ("case", normal("case", [("Łazienka.png", safe_bytes), ("łazienka.PNG", safe_bytes)])),
                     ("ratio", normal("ratio", [("duzy.txt", b"0" * 100_000)])),

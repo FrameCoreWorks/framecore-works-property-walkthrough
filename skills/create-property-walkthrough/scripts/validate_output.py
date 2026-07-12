@@ -18,7 +18,7 @@ from _common import (
     validate_project_root,
 )
 from _schema import DocumentValidationError, load_schema, validate_document
-from render_walkthrough import RenderError, compute_render_dependency_hash
+from render_walkthrough import DEFAULT_FPS, RenderError, compute_render_dependency_hash
 
 
 PROJECT_SCHEMA_PATH = Path(__file__).resolve().parent.parent / "assets" / "project.schema.json"
@@ -98,6 +98,12 @@ def _approved_integrity(
         selection = qc.get(scene_id) if isinstance(qc, dict) else None
         if not isinstance(selection, dict) or selection.get("status") != "approved":
             invalidated_scene_ids.append(scene_id)
+            continue
+        if selection.get("source_comparison_performed") is not True:
+            invalidated_scene_ids.append(scene_id)
+            errors.append(
+                f"Scena {scene_id} nie ma potwierdzonego porównania ze źródłem."
+            )
             continue
         clip = clips.get(str(selection.get("selected_clip_id")))
         if not isinstance(clip, dict):
@@ -186,8 +192,11 @@ def _render_integrity(
             path = resolve_project_path(project_root, record.get("path", ""), must_exist=True)
             if sha256_file(path) != record.get("sha256"):
                 raise OutputValidationError("hash pliku jest niezgodny")
+            fps = record.get("fps", DEFAULT_FPS)
+            if isinstance(fps, bool) or not isinstance(fps, int) or not 1 <= fps <= 60:
+                raise OutputValidationError("render ma niepoprawny zapis FPS")
             expected_dependency = compute_render_dependency_hash(
-                project_root, project, target
+                project_root, project, target, fps=fps
             )
             if record.get("dependency_hash") != expected_dependency:
                 stale_targets.append(target)

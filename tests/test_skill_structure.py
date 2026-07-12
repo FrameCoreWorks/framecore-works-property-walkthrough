@@ -16,7 +16,10 @@ class TestSkillStructure(unittest.TestCase):
             SKILL / "agents" / "openai.yaml",
             ROOT / "README.md",
             ROOT / "LICENSE",
-            ROOT / "THIRD_PARTY_NOTICES.md",
+            ROOT / "CONTRIBUTING.md",
+            ROOT / "SECURITY.md",
+            ROOT / ".github" / "workflows" / "ci.yml",
+            ROOT / ".github" / "pull_request_template.md",
             ROOT / "docs" / "design-synthesis.md",
             ROOT / "docs" / "build-plan.md",
         ]
@@ -49,6 +52,22 @@ class TestSkillStructure(unittest.TestCase):
         tekst = (SKILL / "agents" / "openai.yaml").read_text(encoding="utf-8")
         self.assertIn("allow_implicit_invocation: true", tekst)
         self.assertIn("$create-property-walkthrough", tekst)
+
+    def test_readme_ma_wylacznie_instalacje_codex_native(self):
+        tekst = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("## Instalacja w Codexie", tekst)
+        self.assertIn(
+            "https://github.com/FrameCoreWorks/framecore-works-property-walkthrough",
+            tekst,
+        )
+        for niedozwolone in ("$CODEX_HOME/skills", "git clone", "setup.sh", "WSL"):
+            self.assertNotIn(niedozwolone, tekst)
+
+    def test_ci_obejmuje_windows_i_macos(self):
+        tekst = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        self.assertIn("windows-latest", tekst)
+        self.assertIn("macos-latest", tekst)
+        self.assertIn("permissions:\n  contents: read", tekst)
 
 
 if __name__ == "__main__":

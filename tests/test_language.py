@@ -1,5 +1,6 @@
 """Testy UTF-8 i wymaganych polskich znaków."""
 
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -27,12 +28,15 @@ class TestLanguage(unittest.TestCase):
 
     def test_pomoc_cli_jest_w_calosci_po_polsku(self):
         scripts = ROOT / "skills" / "create-property-walkthrough" / "scripts"
+        environment = os.environ.copy()
+        environment["PYTHONIOENCODING"] = "cp1252"
         names = (
             "init_project.py",
             "update_manifest.py",
             "extract_listing.py",
             "ingest_images.py",
             "make_contact_sheet.py",
+            "apply_image_analysis.py",
             "prepare_generation_package.py",
             "configure_provider.py",
             "validate_provider.py",
@@ -48,6 +52,8 @@ class TestLanguage(unittest.TestCase):
                     check=True,
                     capture_output=True,
                     text=True,
+                    encoding="utf-8",
+                    env=environment,
                     timeout=10,
                 )
                 self.assertIn("użycie:", completed.stdout)

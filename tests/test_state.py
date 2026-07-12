@@ -30,6 +30,7 @@ from _common import (  # noqa: E402
     utc_now,
     validate_project_id,
 )
+import _common as common_module  # noqa: E402
 import init_project as project_initialization  # noqa: E402
 import update_manifest as manifest_updates  # noqa: E402
 from init_project import (  # noqa: E402
@@ -125,6 +126,42 @@ class CommonStateTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ProjectStateError, "poza katalog"):
                 resolve_project_path(root, "../sekret.txt")
+
+    def test_natywna_blokada_windows_ma_backend_standard_library(self) -> None:
+        class FakeMsvcrt:
+            LK_LOCK = 1
+            LK_UNLCK = 2
+
+            def __init__(self) -> None:
+                self.operations = []
+
+            def locking(self, descriptor: int, operation: int, size: int) -> None:
+                self.operations.append((operation, size))
+
+        backend = FakeMsvcrt()
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory) / "projekt-testowy"
+            project.mkdir()
+            with mock.patch.object(common_module, "fcntl", None), mock.patch.object(
+                common_module, "msvcrt", backend
+            ):
+                with common_module.exclusive_project_lock(project):
+                    self.assertTrue((project / ".project.lock").is_file())
+
+        self.assertEqual(
+            [(backend.LK_LOCK, 1), (backend.LK_UNLCK, 1)],
+            backend.operations,
+        )
+
+    def test_windows_nie_wymaga_fsync_katalogu(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            with mock.patch.object(common_module.os, "name", "nt"), mock.patch.object(
+                common_module.os,
+                "open",
+                side_effect=AssertionError("Katalog nie powinien być otwierany na Windows."),
+            ):
+                common_module._fsync_directory(path)
 
 
 class ProjectLifecycleTests(unittest.TestCase):

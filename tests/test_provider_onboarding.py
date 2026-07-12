@@ -25,6 +25,7 @@ from configure_provider import (  # noqa: E402
     UNKNOWN_COST_MESSAGE,
     build_provider_profile,
     configure_provider,
+    ProviderConfigurationError,
     main as configure_main,
 )
 from validate_provider import (  # noqa: E402
@@ -168,6 +169,16 @@ class ProviderOnboardingTests(unittest.TestCase):
                 expected_provider_name="Inny Dostawca",
                 require_verified=True,
             )
+
+    def test_nazwa_dostawcy_nie_moze_przypominac_sekretu(self) -> None:
+        secret_like_name = "sk-" + "AbCdEf0123456789" * 3
+        with self.assertRaisesRegex(ProviderConfigurationError, "przypomina wartość sekretu"):
+            build_provider_profile(secret_like_name, "API", "env:TEST_PROVIDER_KEY")
+
+        profile = validated_profile_data()
+        profile["provider_name"] = secret_like_name
+        with self.assertRaisesRegex(ProviderValidationError, "przypomina wartość sekretu"):
+            validate_profile_data(profile, require_verified=True)
 
 
 if __name__ == "__main__":

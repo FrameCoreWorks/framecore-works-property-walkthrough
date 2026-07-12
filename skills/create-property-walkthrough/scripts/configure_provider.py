@@ -43,6 +43,14 @@ _FORBIDDEN_SECRET_KEYS = {
     "secret",
     "token",
 }
+_SECRET_LIKE_PREFIXES = (
+    "sk-",
+    "ghp_",
+    "github_pat_",
+    "xoxb-",
+    "xoxp-",
+    "AIza",
+)
 
 
 class ProviderConfigurationError(ValueError):
@@ -83,6 +91,22 @@ def validate_secret_reference(reference: str) -> str:
     return reference
 
 
+def looks_like_secret_value(value: str) -> bool:
+    """Rozpoznaje typowe kształty sekretów bez zapisywania ich wartości."""
+
+    if not isinstance(value, str):
+        return False
+    if value.startswith(_SECRET_LIKE_PREFIXES):
+        return True
+    if any(character.isspace() for character in value):
+        return False
+    return bool(
+        len(value) >= 40
+        and re.fullmatch(r"[A-Za-z0-9_+./=-]+", value)
+        and len(set(value)) >= 12
+    )
+
+
 def build_provider_profile(
     provider_name: str,
     connection_method: str,
@@ -98,6 +122,10 @@ def build_provider_profile(
         raise ProviderConfigurationError("Nazwa dostawcy nie może mieć skrajnych spacji.")
     if len(provider_name) > 160 or any(ord(character) < 32 for character in provider_name):
         raise ProviderConfigurationError("Nazwa dostawcy ma niedozwolony format.")
+    if looks_like_secret_value(provider_name):
+        raise ProviderConfigurationError(
+            "Nazwa dostawcy przypomina wartość sekretu; podaj publiczną nazwę usługi."
+        )
 
     method = connection_method.upper()
     if method not in CONNECTION_METHODS:

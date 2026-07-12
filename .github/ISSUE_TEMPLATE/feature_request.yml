@@ -1,0 +1,30 @@
+name: Propozycja usprawnienia
+description: Zaproponuj zmianę zgodną z zakresem skilla Codex Native.
+title: "[Usprawnienie]: "
+labels: [enhancement, triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem użytkownika
+      description: Jaki konkretny problem ma rozwiązać zmiana?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proponowane zachowanie
+      description: Opisz oczekiwany rezultat bez narzucania zbędnej architektury.
+    validations:
+      required: true
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Zgodność z zakresem
+      options:
+        - label: Rozwiązanie pozostaje skillem Codex Native.
+          required: true
+        - label: Rozwiązanie ma działać na macOS i Windows.
+          required: true
+        - label: Propozycja nie wymaga umieszczania sekretów ani danych klientów w repozytorium.
+          required: true
