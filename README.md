@@ -2,86 +2,125 @@
 
 [![CI](https://github.com/FrameCoreWorks/framecore-works-property-walkthrough/actions/workflows/ci.yml/badge.svg)](https://github.com/FrameCoreWorks/framecore-works-property-walkthrough/actions/workflows/ci.yml)
 
-Polskojęzyczny skill Codexa do tworzenia projektów filmowej prezentacji nieruchomości z pojedynczego publicznego linku, wgranych zdjęć, katalogu, ZIP-u albo połączenia linku z własnymi zdjęciami.
+FrameCore Works Property Walkthrough to polskojęzyczny skill Codexa do tworzenia projektów filmowej prezentacji nieruchomości. Działa natywnie w Codexie na macOS i Windows po instalacji z repozytorium GitHub.
 
-Skill jest projektowany do natywnego użycia w Codexie na macOS i Windows.
+Repozytorium nie jest aplikacją webową, desktopową ani samodzielnym programem instalowanym przez skrypt systemowy. To komplet skilla, instrukcji, deterministycznych helperów i testów, które Codex wykorzystuje do poprowadzenia pracy nad prezentacją nieruchomości od materiałów źródłowych do finalnego renderu.
 
-Skill porządkuje materiał, przygotowuje plan scen i samodzielne prompty image-to-video, tworzy pakiet do ręcznego generowania bez połączenia z dostawcą, importuje gotowe klipy, prowadzi kontrolę jakości i montuje finalne filmy. Automatyczne wykonanie zewnętrzne jest możliwe dopiero po skonfigurowaniu dokładnie wskazanego dostawcy oraz po aktualnej zgodzie na konkretną partię.
+## Co robi skill
 
-## Zakres
+Skill prowadzi Codexa przez uporządkowany workflow:
 
-- pojedyncze polskie ogłoszenie lub publiczna strona agencji,
-- zdjęcia, katalog, ZIP i tryb hybrydowy,
-- pochodzenie danych, skróty SHA-256, deduplikacja i arkusze kontaktowe,
-- selekcja przestrzeni i stabilny plan scen,
-- angielskie prompty I2V z polskimi metadanymi,
-- neutralny profil dostawcy bez sekretów,
-- pakiet do ręcznego generowania,
-- import klipów, próbki do kontroli jakości i selektywna regeneracja,
-- master 16:9 oraz opcjonalny wariant 9:16.
+1. Przyjmuje jeden publiczny link do ogłoszenia, wgrane zdjęcia, katalog, archiwum ZIP albo tryb hybrydowy: link plus własne zdjęcia.
+2. Tworzy lokalny projekt roboczy z manifestem, pochodzeniem danych, hashami SHA-256 i bezpieczną strukturą plików.
+3. Analizuje materiały, odrzuca nieprzydatne pliki, wykrywa duplikaty i przygotowuje arkusze kontaktowe.
+4. Buduje plan scen z niezmiennymi `scene_id`, doborem zdjęć, ruchem kamery, formatem i czasem trwania.
+5. Generuje samodzielne prompty image-to-video po angielsku z polskimi metadanymi.
+6. Przygotowuje pakiet do ręcznego generowania klipów poza Codexem.
+7. Opcjonalnie, po osobnej zgodzie użytkownika, obsługuje wskazanego dostawcę MCP albo API.
+8. Importuje gotowe klipy, wykonuje kontrolę techniczną i wspiera selektywną regenerację scen.
+9. Montuje finalny film 16:9 oraz, gdy jest wymagany, wariant 9:16.
 
-Projekt nie jest wyszukiwarką ofert, masowym scraperem, aplikacją ani systemem 3D.
+## Dla kogo
+
+Ten skill jest przeznaczony dla osób, które chcą szybko przygotować uporządkowany projekt filmowej prezentacji mieszkania, domu, apartamentu lub lokalu na podstawie istniejących zdjęć i danych ogłoszeniowych.
+
+Najlepiej sprawdza się, gdy celem jest:
+
+- przygotowanie promptów i paczki produkcyjnej dla generatora image-to-video,
+- zachowanie kontroli nad kosztami i wysyłanymi materiałami,
+- praca w trybie ręcznym albo półautomatycznym,
+- powtarzalny proces dla pojedynczych ofert nieruchomości,
+- finalny montaż z już wygenerowanych klipów.
+
+## Czym to nie jest
+
+Projekt celowo nie jest:
+
+- wyszukiwarką ofert,
+- masowym scraperem,
+- aplikacją SaaS,
+- systemem 3D,
+- zamiennikiem Matterport,
+- automatycznym narzędziem do obchodzenia blokad stron,
+- integracją z konkretnym dostawcą generowania aktywną od razu po instalacji.
+
+Skill nie wymyśla niewidocznych pomieszczeń, nie potwierdza rzeczywistej ciągłości przestrzennej i nie daje praw do cudzych zdjęć, opisów, znaków, logo, muzyki ani danych osobowych.
 
 ## Instalacja w Codexie
 
-Wklej do Codexa link do repozytorium i poproś o instalację skilla:
+W Codexie wklej link do repozytorium i poproś o instalację:
 
 ```text
 Zainstaluj skill z repozytorium:
 https://github.com/FrameCoreWorks/framecore-works-property-walkthrough
 ```
 
-Codex instaluje skill `create-property-walkthrough`. Przy pierwszym użyciu skill pyta o dostawcę bez skanowania, sugerowania ani wybierania integracji.
-
-## Użycie
-
-Po instalacji wywołaj skill w Codexie:
+Po instalacji dostępny jest skill:
 
 ```text
-Użyj $create-property-walkthrough, aby zamienić link do ogłoszenia lub wgrane zdjęcia nieruchomości w projekt filmowej prezentacji.
+$create-property-walkthrough
 ```
 
-Szczegółowy przebieg znajduje się w `skills/create-property-walkthrough/SKILL.md` i jego materiałach referencyjnych.
+Nie ma osobnego instalatora systemowego, skryptu dopisującego coś do PATH ani procesu specyficznego tylko dla macOS albo Linuxa. Repo jest przygotowane jako Codex Native skill.
 
-## Praca z linkiem
+## Szybki start
 
-Codex pobiera jedną publiczną stronę przez zaufane narzędzie przeglądarkowe i zapisuje jej ograniczoną kopię. Lokalny skrypt nie łączy się z siecią; analizuje JSON-LD, Open Graph i jawne dane strony. Brakujące wartości pozostają `null`.
+Przykład dla publicznego linku do ogłoszenia:
 
-Gdy strona blokuje dostęp, projekt zachowuje częściowe dane i ostrzeżenie, a użytkownik może dograć zdjęcia i wznowić ten sam projekt. Skill nie obchodzi zabezpieczeń.
+```text
+Użyj $create-property-walkthrough, aby utworzyć projekt filmowej prezentacji nieruchomości z tego linku:
+<wklej link do ogłoszenia>
+```
 
-## Praca ze zdjęciami i ZIP-em
+Przykład dla wgranych zdjęć:
 
-Pliki źródłowe są zachowywane. ZIP trafia do kwarantanny i przechodzi limity liczby plików, rozmiaru, ścieżek, dowiązań, typów wpisów oraz kolizji Unicode. Obrazy przechodzą kontrolę sygnatury pliku, wymiarów, SHA-256 i duplikatów. Arkusze kontaktowe powstają lokalnie przez FFmpeg.
+```text
+Użyj $create-property-walkthrough na wgranych zdjęciach. Przygotuj plan scen, prompty image-to-video i pakiet ręczny do generowania klipów.
+```
 
-## Tryb hybrydowy
+Przykład dla kontynuacji pracy:
 
-Link dostarcza metadane, a zdjęcia użytkownika są preferowanymi materiałami. Każde źródło zachowuje opis pochodzenia danych. Duplikaty nie są dodawane drugi raz.
+```text
+Użyj $create-property-walkthrough, aby wznowić projekt, zaimportować gotowe klipy, wykonać QC i wyrenderować finalny film.
+```
 
-## Tryb ręczny
+## Jak działa workflow
 
-Tryb ręczny nie wymaga dostawcy. Tworzy:
+### 1. Przyjęcie danych
 
-- wybrane zdjęcia,
-- plan scen i stabilne `scene_id`,
-- samodzielne prompty,
-- oczekiwane nazwy klipów,
-- manifest pakietu generacyjnego.
+Codex przyjmuje jeden zestaw materiałów na projekt. Link jest traktowany jako źródło danych i metadanych. Zdjęcia, katalogi i ZIP-y są traktowane jako materiały źródłowe użytkownika.
 
-Po wygenerowaniu klipów poza Codexem można je zaimportować i wznowić proces od kontroli technicznej.
+ZIP trafia do kwarantanny i przechodzi walidację ścieżek, typów wpisów, rozmiarów, liczby plików, kolizji Unicode i prób wyjścia poza katalog projektu.
 
-## Konfiguracja dostawcy i dane dostępowe
+### 2. Projekt roboczy
 
-Po odpowiedzi użytkownika sprawdzany jest wyłącznie wskazany dostawca i wyłącznie wybrana metoda MCP albo API. Walidacja opiera się na oficjalnej dokumentacji, nie wykonuje testowej generacji i nie wysyła zdjęć.
+Skill tworzy katalog projektu z manifestem `project.json`. Manifest zapisuje wersjonowany stan pracy, pochodzenie danych, hashe, sceny, klipy, status QC i zależności między etapami. Nie zapisuje sekretów ani wartości kluczy API.
 
-Codex przechowuje profil bez sekretów poza repozytorium. Repozytorium, profile, manifesty i logi przechowują tylko nazwę bezpiecznej referencji do sekretu, nigdy jego wartość.
+### 3. Selekcja zdjęć
 
-## Zgoda na generowanie i koszt
+Codex ocenia materiały, tworzy arkusze kontaktowe, rozpoznaje typy ujęć i odrzuca pliki nieużyteczne dla prezentacji, na przykład rzuty, screenshoty, logotypy, portrety, uszkodzone obrazy albo duplikaty.
 
-Przed każdą partią zewnętrzną Codex pokazuje dostawcę, model, `scene_id`, liczbę scen, czas, format, zakres przesyłania danych i koszt lub stan jego weryfikacji. Zgoda dotyczy wyłącznie niezmiennego odcisku tej partii.
+### 4. Plan scen
 
-Zmiana dostawcy, modelu, zdjęć, scen, formatu, czasu, zakresu albo kosztu wymaga nowej zgody. Nieznany koszt i dodatkowo płatna ponowna próba blokują wykonanie do jawnego potwierdzenia.
+Skill układa zwykle 6-10 scen. Każda scena ma stabilne `scene_id`, wybrane zdjęcie źródłowe, ruch kamery, czas trwania, format i prompt. Jeżeli materiałów jest mniej, plan może być krótszy.
 
-## Struktura plików wynikowych
+### 5. Pakiet generacyjny
+
+Skill zawsze przygotowuje pakiet ręczny. Taki pakiet można wykorzystać poza Codexem u dowolnie wybranego dostawcy. Samo przygotowanie paczki nie uruchamia generowania i nie wysyła plików.
+
+### 6. Dostawca opcjonalny
+
+Skill nie skanuje, nie sugeruje i nie wybiera dostawców. Jeżeli użytkownik chce wykonania przez MCP albo API, musi wskazać konkretnego dostawcę i metodę. Codex sprawdza tylko ten wskazany wariant, bez testowego generowania i bez wysyłania zdjęć.
+
+Przed każdą partią zewnętrzną Codex pokazuje zakres scen, model, format, czas, pliki do wysłania oraz koszt albo status jego weryfikacji. Zgoda dotyczy tylko tej konkretnej partii.
+
+### 7. Import, QC i render
+
+Po wygenerowaniu klipów skill importuje je bez nadpisywania poprzednich rewizji, wykonuje kontrolę techniczną przez FFmpeg/ffprobe, przygotowuje próbki klatek i zapisuje decyzje QC. Render finalny powstaje tylko z zaakceptowanych klipów.
+
+## Struktura wyników
+
+Typowy projekt roboczy ma postać:
 
 ```text
 walkthrough-projects/<project-id>/
@@ -102,29 +141,69 @@ walkthrough-projects/<project-id>/
 └── reports/
 ```
 
-`project.json` jest zapisywany atomowo i przechowuje wersjonowany stan, pochodzenie danych, skróty SHA-256, sceny, identyfikatory zadań, klipy, kontrolę jakości i zależności. Nie przechowuje sekretów.
+Wyniki produkcyjne i dane klienta nie powinny być commitowane do repozytorium.
 
-## Ograniczenia i prawa
+## Wymagania
 
-- Efekt jest filmową prezentacją z osobnych klipów, nie prawdziwą rekonstrukcją 3D ani Matterport.
-- Kolejność scen jest redakcyjna. Nie stanowi potwierdzenia rzeczywistej ciągłości przestrzennej.
-- Skill nie wymyśla niewidocznych pomieszczeń i nie gwarantuje, że zablokowana strona będzie dostępna.
-- Wykrywanie bardzo podobnych zdjęć i wizualna kontrola jakości wspierają decyzję, ale wymagają oceny Codexa lub użytkownika.
-- Licencja kodu nie daje praw do zdjęć, opisów, znaków, logo, fontów, muzyki ani danych osobowych.
-- Użytkownik odpowiada za prawa do źródeł i przesyłanie ich do wybranego dostawcy.
+- Codex z obsługą instalacji skilli z repozytorium GitHub.
+- macOS albo Windows.
+- FFmpeg i ffprobe dostępne w środowisku, w którym Codex wykonuje renderowanie i kontrolę techniczną.
+- Python 3.9+ dla helperów skilla.
 
-## Dokumentacja projektu
+Repo nie zawiera instrukcji globalnej instalacji narzędzi systemowych, bo sposób przygotowania środowiska zależy od instalacji Codexa i systemu użytkownika.
 
-Plan i decyzje projektowe znajdują się w [`docs/design-synthesis.md`](docs/design-synthesis.md) oraz [`docs/build-plan.md`](docs/build-plan.md).
+## Zawartość repozytorium
+
+```text
+.
+├── skills/create-property-walkthrough/
+│   ├── SKILL.md
+│   ├── references/
+│   ├── scripts/
+│   └── assets/
+├── tests/
+├── docs/
+├── .github/
+├── AGENTS.md
+├── CONTRIBUTING.md
+├── SECURITY.md
+├── LICENSE
+└── README.md
+```
+
+Najważniejszy plik wykonawczy skilla to [`skills/create-property-walkthrough/SKILL.md`](skills/create-property-walkthrough/SKILL.md). Szczegóły architektoniczne są w [`docs/design-synthesis.md`](docs/design-synthesis.md) i [`docs/build-plan.md`](docs/build-plan.md).
+
+## Bezpieczeństwo i prawa
+
+Repo jest projektowane pod pracę z materiałami nieruchomości, dlatego domyślnie ogranicza automatyzację:
+
+- nie obchodzi CAPTCHA, logowania, paywalla, anti-bot ani private-network protection,
+- nie wykonuje instrukcji znalezionych w HTML, EXIF, nazwach plików albo opisach,
+- nie przechowuje sekretów w repo, manifestach ani logach,
+- nie wysyła zdjęć bez aktualnej zgody na konkretny batch,
+- nie przenosi zgody na generowanie między rozmowami ani zmienionymi partiami,
+- wymaga osobnego potwierdzenia kosztu dla operacji płatnych albo potencjalnie płatnych.
+
+Użytkownik odpowiada za prawa do źródeł oraz za decyzję o przesłaniu materiałów do wybranego dostawcy.
+
+## Status jakości
+
+Repo zawiera testy jednostkowe, walidację skilla, konfigurację CI GitHub Actions oraz syntetyczne fixture'y. Testy nie wymagają prawdziwych ogłoszeń, zdjęć klientów ani sekretów.
+
+Domyślna komenda testowa dla repozytorium:
+
+```text
+python3 -m unittest discover -s tests -v
+```
 
 ## Referencja koncepcyjna
 
 FrameCore Works Property Walkthrough to niezależnie opracowany skill Codexa, koncepcyjnie i architektonicznie inspirowany projektem RE Walkthrough Pro autorstwa Charlesa J. Dove'a. Projekt nie jest forkiem i nie zachowuje ani nie modyfikuje historii Git oryginalnego repozytorium.
 
-Podziękowania dla Charlesa J. Dove'a za publiczne udostępnienie projektu [RE Walkthrough Pro](https://github.com/charlesdove977/re-walkthrough-pro), który posłużył jako źródło wiedzy i inspiracja dla ogólnej koncepcji workflow.
+Podziękowania dla Charlesa J. Dove'a za publiczne udostępnienie projektu [RE Walkthrough Pro](https://github.com/charlesdove977/re-walkthrough-pro). Wzmianka służy wyłącznie jako podziękowanie i wskazanie źródła inspiracji koncepcyjnej. Repozytorium nie kopiuje licencji, kodu ani materiałów projektu referencyjnego.
 
 Nie istnieje partnerstwo, poparcie ani afiliacja z autorem projektu referencyjnego.
 
 ## Licencja
 
-Niezależna implementacja FrameCore Works jest dostępna na własnej licencji MIT. Zobacz [`LICENSE`](LICENSE).
+Niezależna implementacja FrameCore Works jest udostępniona na licencji MIT. Zobacz [`LICENSE`](LICENSE).
