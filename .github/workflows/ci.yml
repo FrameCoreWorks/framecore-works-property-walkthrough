@@ -34,6 +34,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Udostępnij FFmpeg w środowisku testowym Windows
+        if: runner.os == 'Windows'
+        run: choco install ffmpeg --yes --no-progress
+
       - name: Uruchom testy
         run: python -m unittest discover -s tests -v
 
