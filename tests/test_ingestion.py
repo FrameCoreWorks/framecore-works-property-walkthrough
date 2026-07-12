@@ -60,6 +60,17 @@ def _zip_with_backslash(path: Path, payload: bytes) -> None:
 class IngestionTests(unittest.TestCase):
     """Każde wejście przechodzi przez kwarantannę i limity fail-closed."""
 
+    def test_zip_sprawdza_surowa_nazwe_sprzed_normalizacji_windows(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ingest-zip-orig-") as temporary:
+            archive_path = Path(temporary) / "backslash.zip"
+            _zip_with_backslash(archive_path, b"fixture")
+
+            with zipfile.ZipFile(archive_path, "r") as archive:
+                info = archive.infolist()[0]
+                info.filename = "folder/atak.png"
+                with self.assertRaises(ingestion.IngestionError):
+                    ingestion._validate_zip_entries(archive, ingestion.IngestionLimits())
+
     def test_pojedynczy_plik_i_polska_sciezka_zachowuja_original(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ingest-łódź-") as temporary:
             root = Path(temporary)

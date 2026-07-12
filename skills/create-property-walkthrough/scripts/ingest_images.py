@@ -328,15 +328,16 @@ def _validate_zip_entries(
     total = 0
 
     for info in infos:
+        original_name = getattr(info, "orig_filename", info.filename)
         if info.flag_bits & 0x1:
-            raise IngestionError("ZIP zawiera zaszyfrowany wpis: {}".format(info.filename))
+            raise IngestionError("ZIP zawiera zaszyfrowany wpis: {}".format(original_name))
         kind = _zip_file_type(info)
         if kind == "symlink":
-            raise IngestionError("ZIP zawiera dowiązanie symboliczne: {}".format(info.filename))
+            raise IngestionError("ZIP zawiera dowiązanie symboliczne: {}".format(original_name))
         if kind == "special":
-            raise IngestionError("ZIP zawiera plik specjalny: {}".format(info.filename))
+            raise IngestionError("ZIP zawiera plik specjalny: {}".format(original_name))
         declared_directory = info.is_dir() or kind == "directory"
-        relative = _safe_relative_name(info.filename, is_directory=declared_directory)
+        relative = _safe_relative_name(original_name, is_directory=declared_directory)
         key = _collision_key(relative)
         if key in seen:
             raise IngestionError(
@@ -374,7 +375,8 @@ def _validate_zip_entries(
         kind = _zip_file_type(info)
         if info.is_dir() or kind == "directory":
             continue
-        relative = _safe_relative_name(info.filename)
+        original_name = getattr(info, "orig_filename", info.filename)
+        relative = _safe_relative_name(original_name)
         suffix = PurePosixPath(relative).suffix.casefold()
         try:
             with archive.open(info, "r") as handle:
