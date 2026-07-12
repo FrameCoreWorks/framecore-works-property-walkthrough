@@ -1,0 +1,40 @@
+{
+  "name": "framecore-works-property-walkthrough",
+  "version": "1.0.0",
+  "description": "Polskojęzyczny plugin ChatGPT/Codex zawierający skill do tworzenia projektów filmowej prezentacji nieruchomości.",
+  "author": {
+    "name": "FrameCore Works",
+    "url": "https://github.com/FrameCoreWorks"
+  },
+  "homepage": "https://github.com/FrameCoreWorks/framecore-works-property-walkthrough",
+  "repository": "https://github.com/FrameCoreWorks/framecore-works-property-walkthrough",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "chatgpt",
+    "skill",
+    "plugin",
+    "real-estate",
+    "property-walkthrough",
+    "image-to-video"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "FrameCore Works Property Walkthrough",
+    "shortDescription": "Tworzy projekty filmowej prezentacji nieruchomości w ChatGPT i Codexie.",
+    "longDescription": "Plugin zawiera skill create-property-walkthrough, który prowadzi użytkownika przez przygotowanie prezentacji nieruchomości: wybór dostawcy przy pierwszym użyciu, przyjęcie linku lub zdjęć, selekcję materiałów, plan scen, prompty image-to-video, pakiet ręczny, import klipów, kontrolę jakości i render finalny.",
+    "developerName": "FrameCore Works",
+    "category": "Productivity",
+    "capabilities": [
+      "Skills",
+      "Files",
+      "Media workflow"
+    ],
+    "defaultPrompt": [
+      "Utwórz projekt walkthrough z linku do ogłoszenia.",
+      "Najpierw zapytaj mnie o dostawcę MCP/API.",
+      "Zaimportuj klipy, wykonaj QC i render."
+    ],
+    "brandColor": "#1F6FEB"
+  }
+}

@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/FrameCoreWorks/framecore-works-property-walkthrough/actions/workflows/ci.yml/badge.svg)](https://github.com/FrameCoreWorks/framecore-works-property-walkthrough/actions/workflows/ci.yml)
 
-FrameCore Works Property Walkthrough to polskojęzyczny skill Codexa do tworzenia projektów filmowej prezentacji nieruchomości. Działa natywnie w Codexie na macOS i Windows po instalacji z repozytorium GitHub.
+FrameCore Works Property Walkthrough to polskojęzyczny skill i plugin ChatGPT/Codex do tworzenia projektów filmowej prezentacji nieruchomości. Działa natywnie w ChatGPT/Codex na macOS i Windows po instalacji z repozytorium GitHub.
 
-Repozytorium nie jest aplikacją webową, desktopową ani samodzielnym programem instalowanym przez skrypt systemowy. To komplet skilla, instrukcji, deterministycznych helperów i testów, które Codex wykorzystuje do poprowadzenia pracy nad prezentacją nieruchomości od materiałów źródłowych do finalnego renderu.
+Repozytorium nie jest aplikacją webową, desktopową ani samodzielnym programem instalowanym przez skrypt systemowy. To komplet pluginu, skilla, instrukcji, deterministycznych helperów i testów, które ChatGPT/Codex wykorzystuje do poprowadzenia pracy nad prezentacją nieruchomości od materiałów źródłowych do finalnego renderu.
 
 ## Co robi skill
 
@@ -46,14 +46,21 @@ Projekt celowo nie jest:
 
 Skill nie wymyśla niewidocznych pomieszczeń, nie potwierdza rzeczywistej ciągłości przestrzennej i nie daje praw do cudzych zdjęć, opisów, znaków, logo, muzyki ani danych osobowych.
 
-## Instalacja w Codexie
+## Instalacja w ChatGPT i Codexie
 
-W Codexie wklej link do repozytorium i poproś o instalację:
+Repo jest przygotowane w dwóch warstwach:
+
+- jako skill: `skills/create-property-walkthrough`,
+- jako plugin dystrybucyjny: `.codex-plugin/plugin.json`, który wskazuje katalog `./skills/`.
+
+W ChatGPT albo Codexie wklej link do repozytorium i poproś o instalację:
 
 ```text
-Zainstaluj skill z repozytorium:
+Zainstaluj plugin albo skill z repozytorium:
 https://github.com/FrameCoreWorks/framecore-works-property-walkthrough
 ```
+
+Sama instalacja tylko dodaje plugin albo skill do środowiska. ChatGPT nie uruchamia wtedy workflow i dlatego nie zadaje jeszcze pytania o dostawcę. Pytanie o dostawcę MCP/API pojawia się przy pierwszym użyciu skilla.
 
 Po instalacji dostępny jest skill:
 
@@ -61,7 +68,7 @@ Po instalacji dostępny jest skill:
 $create-property-walkthrough
 ```
 
-Nie ma osobnego instalatora systemowego, skryptu dopisującego coś do PATH ani procesu specyficznego tylko dla macOS albo Linuxa. Repo jest przygotowane jako Codex Native skill.
+Nie ma osobnego instalatora systemowego, skryptu dopisującego coś do PATH ani procesu specyficznego tylko dla macOS albo Linuxa. Repo jest przygotowane jako ChatGPT/Codex Native skill oraz plugin-ready paczka.
 
 ## Szybki start
 
@@ -71,6 +78,8 @@ Przykład dla publicznego linku do ogłoszenia:
 Użyj $create-property-walkthrough, aby utworzyć projekt filmowej prezentacji nieruchomości z tego linku:
 <wklej link do ogłoszenia>
 ```
+
+Przy linku skill najpierw zapisuje bezpieczny snapshot strony i wyciąga metadane. Jeżeli snapshot albo zaufana powierzchnia ChatGPT/Codex ujawnia publiczne URL-e zdjęć, skill próbuje pobrać je do lokalnego batcha i przyjmuje przez walidowany ingestion. Jeżeli portal, na przykład Otodom, nie udostępnia pełnych zdjęć bez blokady, cookies albo obejścia anti-bot, skill zatrzymuje tryb linku jako partial i prosi o upload zdjęć lub lokalny eksport.
 
 Przykład dla wgranych zdjęć:
 
@@ -114,6 +123,8 @@ Skill nie skanuje, nie sugeruje i nie wybiera dostawców. Jeżeli użytkownik ch
 
 Przed każdą partią zewnętrzną Codex pokazuje zakres scen, model, format, czas, pliki do wysłania oraz koszt albo status jego weryfikacji. Zgoda dotyczy tylko tej konkretnej partii.
 
+W ChatGPT zewnętrzny dostawca może być podpięty przez osobną wtyczkę, connector albo MCP dostępne w danym środowisku. Ten plugin nie bundluje żadnego dostawcy i nie aktywuje fal.ai ani innej usługi samodzielnie. Provider jest wybierany dopiero w rozmowie przez użytkownika i nadal podlega zgodzie na upload oraz koszt.
+
 ### 7. Import, QC i render
 
 Po wygenerowaniu klipów skill importuje je bez nadpisywania poprzednich rewizji, wykonuje kontrolę techniczną przez FFmpeg/ffprobe, przygotowuje próbki klatek i zapisuje decyzje QC. Render finalny powstaje tylko z zaakceptowanych klipów.
@@ -156,8 +167,11 @@ Repo nie zawiera instrukcji globalnej instalacji narzędzi systemowych, bo spos�
 
 ```text
 .
+├── .codex-plugin/
+│   └── plugin.json
 ├── skills/create-property-walkthrough/
 │   ├── SKILL.md
+│   ├── agents/openai.yaml
 │   ├── references/
 │   ├── scripts/
 │   └── assets/

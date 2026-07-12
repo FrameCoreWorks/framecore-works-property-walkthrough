@@ -1,7 +1,7 @@
 interface:
   display_name: "FrameCore Works Property Walkthrough"
   short_description: "Tworzenie filmów nieruchomości z linków lub zdjęć"
-  default_prompt: "Użyj $create-property-walkthrough, aby zamienić link do ogłoszenia lub wgrane zdjęcia nieruchomości w kompletny projekt filmowego walkthrough."
+  default_prompt: "Użyj $create-property-walkthrough. Najpierw zapytaj mnie o dostawcę MCP/API, a potem przygotuj projekt walkthrough z linku lub zdjęć."
 
 policy:
   allow_implicit_invocation: true

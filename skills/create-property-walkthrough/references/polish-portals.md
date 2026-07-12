@@ -13,6 +13,12 @@ Obsługuj pojedynczą publiczną stronę ogłoszenia lub agencji tylko wtedy, gd
 
 Zapisuj tytuł, lokalizację, cenę, walutę, powierzchnię, liczbę pokoi, piętro, typ, opis i zdjęcia tylko wtedy, gdy występują. Nie zgaduj jednostek, waluty ani lokalizacji.
 
+## Zdjęcia z portali takich jak Otodom
+
+Otodom i podobne portale mogą renderować galerię klientowo albo ukrywać pełne zdjęcia poza JSON-LD i Open Graph. Najpierw użyj publicznych URL-i zdjęć znalezionych w `listing.images` albo jawnie widocznych w zaufanej powierzchni web/browser. Jeżeli takie URL-e są dostępne, spróbuj pobrać obrazy przez zaufaną powierzchnię i przyjmij je przez `ingest_images.py`.
+
+Nie buduj adaptera konkretnego portalu, nie używaj cookies, stealth, proxy, prywatnych endpointów ani mechanizmów obchodzących anti-bot. Jeżeli pełne zdjęcia nie są technicznie dostępne bez takiego obejścia, zatrzymaj link mode jako partial i poproś użytkownika o upload zdjęć albo lokalny eksport z przeglądarki.
+
 ## Polskie formaty
 
 - Zachowuj oryginalny tekst ceny i osobno normalizuj liczbę, gdy jest jednoznaczna.
