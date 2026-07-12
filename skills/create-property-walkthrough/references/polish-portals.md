@@ -15,9 +15,9 @@ Zapisuj tytuł, lokalizację, cenę, walutę, powierzchnię, liczbę pokoi, pię
 
 ## Zdjęcia z portali takich jak Otodom
 
-Otodom i podobne portale mogą renderować galerię klientowo albo ukrywać pełne zdjęcia poza JSON-LD i Open Graph. Najpierw użyj publicznych URL-i zdjęć znalezionych w `listing.images` albo jawnie widocznych w zaufanej powierzchni web/browser. Jeżeli takie URL-e są dostępne, spróbuj pobrać obrazy przez zaufaną powierzchnię i przyjmij je przez `ingest_images.py`.
+Otodom i podobne portale mogą renderować galerię klientowo albo ukrywać pełne zdjęcia poza JSON-LD i Open Graph. Najpierw użyj publicznych URL-i zdjęć znalezionych w `listing.images`, w tym URL-i z `img`, `srcset`, `source`, `twitter:image` i linków preload/prefetch do obrazów w lokalnym snapshotcie. Jeżeli takie URL-e są dostępne, spróbuj pobrać obrazy przez zaufaną powierzchnię i przyjmij je przez `ingest_images.py`.
 
-Nie buduj adaptera konkretnego portalu, nie używaj cookies, stealth, proxy, prywatnych endpointów ani mechanizmów obchodzących anti-bot. Jeżeli pełne zdjęcia nie są technicznie dostępne bez takiego obejścia, zatrzymaj link mode jako partial i poproś użytkownika o upload zdjęć albo lokalny eksport z przeglądarki.
+Nie buduj adaptera konkretnego portalu, nie używaj cookies, stealth, proxy, prywatnych endpointów ani mechanizmów obchodzących anti-bot. Jeżeli pełne zdjęcia nie są technicznie dostępne bez takiego obejścia, zatrzymaj link mode jako partial i poinstruuj użytkownika, aby samodzielnie otworzył ogłoszenie w przeglądarce, wizualnie zapisał widoczne zdjęcia nieruchomości na swoim urządzeniu i wgrał je do okna rozmowy ChatGPT/Codex.
 
 ## Polskie formaty
 
@@ -32,5 +32,5 @@ Przy 401, 403, CAPTCHA, logowaniu, paywallu, anti-bot, timeout albo niedostępny
 
 1. Zapisz uzyskane publiczne dane i dokładny kod ostrzeżenia.
 2. Nie próbuj stealth, proxy, cookies, headless bypass ani innego endpointu.
-3. Poproś o zdjęcia lub lokalny eksport.
+3. Poinstruuj użytkownika, aby samodzielnie zapisał widoczne zdjęcia nieruchomości ze strony w swojej przeglądarce i wgrał pliki bezpośrednio do okna rozmowy ChatGPT/Codex.
 4. Wznów ten sam `project_id`.

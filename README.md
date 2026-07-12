@@ -79,7 +79,7 @@ Użyj $create-property-walkthrough, aby utworzyć projekt filmowej prezentacji n
 <wklej link do ogłoszenia>
 ```
 
-Przy linku skill najpierw zapisuje bezpieczny snapshot strony i wyciąga metadane. Jeżeli snapshot albo zaufana powierzchnia ChatGPT/Codex ujawnia publiczne URL-e zdjęć, skill próbuje pobrać je do lokalnego batcha i przyjmuje przez walidowany ingestion. Jeżeli portal, na przykład Otodom, nie udostępnia pełnych zdjęć bez blokady, cookies albo obejścia anti-bot, skill zatrzymuje tryb linku jako partial i prosi o upload zdjęć lub lokalny eksport.
+Przy linku skill najpierw zapisuje bezpieczny snapshot strony i wyciąga metadane. Jeżeli snapshot albo zaufana powierzchnia ChatGPT/Codex ujawnia publiczne URL-e zdjęć, także przez `img`, `srcset` albo widoczne metadane obrazu, skill próbuje pobrać je do lokalnego batcha i przyjmuje przez walidowany ingestion. Jeżeli portal, na przykład Otodom, nie udostępnia pełnych zdjęć bez blokady, cookies albo obejścia anti-bot, skill zatrzymuje tryb linku jako partial i instruuje użytkownika, żeby sam otworzył ogłoszenie w przeglądarce, wizualnie zapisał widoczne zdjęcia nieruchomości na swoim urządzeniu i wgrał je bezpośrednio do okna rozmowy ChatGPT/Codex.
 
 Przykład dla wgranych zdjęć:
 

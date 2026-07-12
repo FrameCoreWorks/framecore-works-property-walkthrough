@@ -2,7 +2,8 @@
 """Wyodrębnianie danych ogłoszenia wyłącznie z lokalnego snapshotu HTML.
 
 Helper nie pobiera stron, nie rozwiązuje DNS i nie otwiera socketów. Snapshot
-jest nieufnym zbiorem danych: parser odczytuje tylko JSON-LD i Open Graph.
+jest nieufnym zbiorem danych: parser odczytuje JSON-LD, Open Graph oraz jawne
+publiczne URL-e obrazów z HTML, które zaufana powierzchnia może później pobrać.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ import re
 import stat
 import sys
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 try:
     from _common import PolishArgumentParser, atomic_write_json, sha256_file
@@ -124,11 +125,12 @@ def validate_http_url(value: str) -> str:
 
 
 class _SnapshotParser(HTMLParser):
-    """Ograniczony parser zbierający tylko jawne metadane i JSON-LD."""
+    """Ograniczony parser zbierający tylko jawne metadane i URL-e obrazów."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.open_graph: Dict[str, List[str]] = {}
+        self.html_image_candidates: List[Tuple[str, str]] = []
         self.json_ld_blocks: List[str] = []
         self._json_ld_buffer: Optional[List[str]] = None
         self._json_ld_chars = 0
@@ -152,6 +154,21 @@ class _SnapshotParser(HTMLParser):
             if name.startswith(("og:", "product:", "place:", "realestate:")) and content:
                 if len(name) <= 200 and len(content) <= 50_000:
                     self.open_graph.setdefault(name, []).append(content)
+            elif name in {"twitter:image", "twitter:image:src"} and content:
+                self._add_image_candidate(content, "{}.content".format(name))
+        elif lowered == "img":
+            for key in ("src", "data-src", "data-original", "data-lazy-src"):
+                self._add_image_candidate(attributes.get(key), "img.{}".format(key))
+            for key in ("srcset", "data-srcset"):
+                self._add_srcset_candidates(attributes.get(key), "img.{}".format(key))
+        elif lowered == "source":
+            for key in ("srcset", "data-srcset"):
+                self._add_srcset_candidates(attributes.get(key), "source.{}".format(key))
+        elif lowered == "link":
+            rel = " ".join(attributes.get("rel", "").casefold().split())
+            as_value = attributes.get("as", "").casefold()
+            if rel == "image_src" or (rel in {"preload", "prefetch"} and as_value == "image"):
+                self._add_image_candidate(attributes.get("href"), "link.href")
         elif lowered == "script":
             content_type = (attributes.get("type") or "").split(";", 1)[0].strip().casefold()
             if content_type == "application/ld+json":
@@ -161,6 +178,22 @@ class _SnapshotParser(HTMLParser):
                     raise ListingExtractionError("Snapshot zawiera zbyt wiele bloków JSON-LD.")
                 self._json_ld_buffer = []
                 self._json_ld_chars = 0
+
+    def _add_image_candidate(self, value: Optional[str], path: str) -> None:
+        if not isinstance(value, str):
+            return
+        candidate = re.sub(r"\s+", " ", value).strip()
+        if not candidate or len(candidate) > 4096:
+            return
+        self.html_image_candidates.append((candidate, path))
+
+    def _add_srcset_candidates(self, value: Optional[str], path: str) -> None:
+        if not isinstance(value, str) or len(value) > 20_000:
+            return
+        for index, item in enumerate(value.split(",")):
+            candidate = item.strip().split()
+            if candidate:
+                self._add_image_candidate(candidate[0], "{}[{}]".format(path, index))
 
     def handle_data(self, data: str) -> None:
         if self._json_ld_buffer is None:
@@ -333,6 +366,31 @@ def _image_urls(value: Any) -> List[str]:
     return result
 
 
+def _html_image_urls(
+    candidates: Sequence[Tuple[str, str]], base_url: Optional[str]
+) -> List[Tuple[str, str]]:
+    """Znormalizuj jawne URL-e obrazów z HTML bez wykonywania połączeń sieciowych."""
+
+    result: List[Tuple[str, str]] = []
+    seen: set[str] = set()
+    for raw, path in candidates:
+        parsed = urlsplit(raw)
+        if parsed.scheme and parsed.scheme.casefold() not in {"http", "https"}:
+            continue
+        if not parsed.scheme and not base_url:
+            continue
+        candidate = urljoin(base_url, raw) if not parsed.scheme else raw
+        try:
+            validated = validate_http_url(candidate)
+        except ListingExtractionError:
+            continue
+        if validated in seen:
+            continue
+        seen.add(validated)
+        result.append((validated, path))
+    return result
+
+
 class _Accumulator:
     def __init__(self) -> None:
         self.listing: Dict[str, Any] = {field: None for field in LISTING_FIELDS}
@@ -454,6 +512,13 @@ def _consume_open_graph(accumulator: _Accumulator, meta: Dict[str, List[str]]) -
     accumulator.add_images(image_values, source="open_graph", path="og:image")
 
 
+def _consume_html_images(
+    accumulator: _Accumulator, candidates: Sequence[Tuple[str, str]], base_url: Optional[str]
+) -> None:
+    for value, path in _html_image_urls(candidates, base_url):
+        accumulator.add_images([value], source="html_image", path=path)
+
+
 def _read_snapshot(path: Path, max_bytes: int) -> Tuple[str, int, str]:
     try:
         metadata = path.lstat()
@@ -515,6 +580,7 @@ def extract_listing_snapshot(
         except ListingExtractionError as exc:
             warnings.append(str(exc))
     _consume_open_graph(accumulator, parser.open_graph)
+    _consume_html_images(accumulator, parser.html_image_candidates, validated_url)
 
     present = sum(accumulator.listing[field] is not None for field in LISTING_FIELDS)
     if accumulator.listing["images"]:

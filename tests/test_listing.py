@@ -114,6 +114,46 @@ class ListingExtractionTests(unittest.TestCase):
         self.assertEqual(result["errors"], ["HTTP 403: dostęp zablokowany"])
         self.assertTrue(all(value is None for key, value in result["listing"].items() if key != "images"))
         self.assertEqual(result["listing"]["images"], [])
+        self.assertIn("wymagany jest upload zdjęć", result["warnings"][0])
+
+    def test_html_img_srcset_i_relative_urls_sa_kandydatami_zdjec(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="listing-html-img-") as temporary:
+            snapshot = Path(temporary) / "html-img.html"
+            snapshot.write_text(
+                """<!doctype html><html><head>
+                <meta name="twitter:image" content="https://cdn.example.pl/twitter.jpg">
+                <link rel="image_src" href="/static/hero.jpg">
+                <link rel="preload" as="image" href="https://cdn.example.pl/preload.jpg">
+                </head><body>
+                <img src="/photos/salon.jpg">
+                <img data-src="https://cdn.example.pl/kuchnia.jpg">
+                <img data-original="data:image/png;base64,abc">
+                <img data-lazy-src="https://user:haslo@example.pl/sekret.jpg">
+                <source srcset="/photos/sypialnia.jpg 1x, https://cdn.example.pl/sypialnia-2.jpg 2x">
+                <img src="http://127.0.0.1/prywatne.jpg">
+                </body></html>""",
+                encoding="utf-8",
+            )
+
+            result = extract_listing.extract_listing_snapshot(
+                snapshot, "https://portal.example.pl/oferta/123"
+            )
+
+        self.assertEqual(
+            result["listing"]["images"],
+            [
+                "https://cdn.example.pl/twitter.jpg",
+                "https://portal.example.pl/static/hero.jpg",
+                "https://cdn.example.pl/preload.jpg",
+                "https://portal.example.pl/photos/salon.jpg",
+                "https://cdn.example.pl/kuchnia.jpg",
+                "https://portal.example.pl/photos/sypialnia.jpg",
+                "https://cdn.example.pl/sypialnia-2.jpg",
+            ],
+        )
+        self.assertTrue(
+            any(entry["source"] == "html_image" for entry in result["provenance"]["images"])
+        )
 
     def test_malformed_json_ld_nie_wymyśla_danych(self) -> None:
         with tempfile.TemporaryDirectory(prefix="listing-źle-") as temporary:
