@@ -9,6 +9,7 @@ import json
 import os
 import re
 import stat
+import sys
 import tempfile
 import unicodedata
 from contextlib import contextmanager
@@ -16,7 +17,7 @@ from contextvars import ContextVar
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, Iterator, Union
+from typing import Any, Callable, Dict, Iterable, Iterator, Optional, Sequence, Union
 
 try:
     import fcntl
@@ -52,6 +53,20 @@ class ProjectStatePostCommitError(ProjectStateError):
         self.published = True
 
 
+def configure_utf8_stdio() -> None:
+    """Ustaw stabilne UTF-8 dla wyjścia CLI na macOS i Windows."""
+
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding="utf-8", errors="strict")
+            except (OSError, ValueError):
+                # Strumienie zastępcze używane przez hosta mogą nie pozwalać
+                # na rekonfigurację. Wtedy zachowujemy ustawienia hosta.
+                pass
+
+
 class PolishArgumentParser(argparse.ArgumentParser):
     """ArgumentParser z pełną, stabilną pomocą po polsku."""
 
@@ -82,6 +97,16 @@ class PolishArgumentParser(argparse.ArgumentParser):
 
     def format_help(self) -> str:
         return self._translate_labels(super().format_help())
+
+    def parse_args(
+        self,
+        args: Optional[Sequence[str]] = None,
+        namespace: Optional[argparse.Namespace] = None,
+    ) -> argparse.Namespace:
+        """Parsuj argumenty po ustaleniu kodowania strumieni polecenia."""
+
+        configure_utf8_stdio()
+        return super().parse_args(args, namespace)
 
 
 def utc_now() -> str:
