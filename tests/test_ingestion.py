@@ -45,6 +45,18 @@ def _mark_zip_encrypted(path: Path) -> None:
     path.write_bytes(data)
 
 
+def _zip_with_backslash(path: Path, payload: bytes) -> None:
+    """Utwórz ZIP z backslashem niezależnie od normalizacji hosta Windows."""
+
+    portable_name = b"folder/atak.png"
+    unsafe_name = b"folder\\atak.png"
+    _zip(path, [(portable_name.decode("ascii"), payload)])
+    data = path.read_bytes()
+    if data.count(portable_name) != 2:
+        raise AssertionError("Fixture ZIP nie ma oczekiwanych dwóch nagłówków nazwy.")
+    path.write_bytes(data.replace(portable_name, unsafe_name))
+
+
 class IngestionTests(unittest.TestCase):
     """Każde wejście przechodzi przez kwarantannę i limity fail-closed."""
 
@@ -176,7 +188,7 @@ class IngestionTests(unittest.TestCase):
                 [
                     ("traversal", normal("traversal", [("dobry.png", safe_bytes), ("../ucieczka.png", safe_bytes)])),
                     ("absolute", normal("absolute", [("/tmp/atak.png", safe_bytes)])),
-                    ("backslash", normal("backslash", [("folder\\atak.png", safe_bytes)])),
+                    ("backslash", lambda path: _zip_with_backslash(path, safe_bytes)),
                     ("nested", normal("nested", [("dobry.png", safe_bytes), ("inner.zip", inner_buffer.getvalue())])),
                     ("case", normal("case", [("Łazienka.png", safe_bytes), ("łazienka.PNG", safe_bytes)])),
                     ("ratio", normal("ratio", [("duzy.txt", b"0" * 100_000)])),
