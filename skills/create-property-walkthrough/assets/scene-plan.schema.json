@@ -90,6 +90,16 @@
               "not_applicable"
             ]
           },
+          "vertical_anchor": {
+            "type": "string",
+            "enum": [
+              "center",
+              "left",
+              "right",
+              "top",
+              "bottom"
+            ]
+          },
           "prompt_en": {
             "type": "string",
             "minLength": 80,

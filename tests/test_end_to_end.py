@@ -68,6 +68,8 @@ class ProviderFreeEndToEndTests(unittest.TestCase):
                     int(record["revision"]),
                     "approved",
                     notes_pl="Syntetyczna kontrola E2E.",
+                    source_comparison_performed=True,
+                    comparison_evidence_pl="Porównano syntetyczne próbki ze źródłem.",
                 )
             render_report = render_walkthrough(project_root, include_vertical=True)
             resume_report = analyze_resume(project_root)

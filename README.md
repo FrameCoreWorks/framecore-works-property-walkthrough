@@ -1,8 +1,12 @@
 # FrameCore Works Property Walkthrough
 
+[![CI](https://github.com/FrameCoreWorks/framecore-works-property-walkthrough/actions/workflows/ci.yml/badge.svg)](https://github.com/FrameCoreWorks/framecore-works-property-walkthrough/actions/workflows/ci.yml)
+
 Polskojęzyczny skill Codexa do tworzenia projektów filmowej prezentacji nieruchomości z pojedynczego publicznego linku, wgranych zdjęć, katalogu, ZIP-u albo połączenia linku z własnymi zdjęciami.
 
-Skill porządkuje materiał, przygotowuje plan scen i samodzielne prompty image-to-video, tworzy pakiet do ręcznego generowania bez połączenia z dostawcą, importuje gotowe klipy, prowadzi kontrolę jakości i montuje lokalne filmy przez FFmpeg. Automatyczne wykonanie zewnętrzne jest możliwe dopiero po skonfigurowaniu dokładnie wskazanego dostawcy oraz po aktualnej zgodzie na konkretną partię.
+Skill jest projektowany do natywnego użycia w Codexie na macOS i Windows.
+
+Skill porządkuje materiał, przygotowuje plan scen i samodzielne prompty image-to-video, tworzy pakiet do ręcznego generowania bez połączenia z dostawcą, importuje gotowe klipy, prowadzi kontrolę jakości i montuje finalne filmy. Automatyczne wykonanie zewnętrzne jest możliwe dopiero po skonfigurowaniu dokładnie wskazanego dostawcy oraz po aktualnej zgodzie na konkretną partię.
 
 ## Zakres
 
@@ -13,47 +17,31 @@ Skill porządkuje materiał, przygotowuje plan scen i samodzielne prompty image-
 - angielskie prompty I2V z polskimi metadanymi,
 - neutralny profil dostawcy bez sekretów,
 - pakiet do ręcznego generowania,
-- import klipów, ffprobe, próbki do kontroli jakości i selektywna regeneracja,
+- import klipów, próbki do kontroli jakości i selektywna regeneracja,
 - master 16:9 oraz opcjonalny wariant 9:16.
 
 Projekt nie jest wyszukiwarką ofert, masowym scraperem, aplikacją ani systemem 3D.
 
-## Wymagania
+## Instalacja w Codexie
 
-- Codex z obsługą skilli,
-- Python 3.9 lub nowszy; zalecany Python 3.11,
-- FFmpeg i ffprobe dostępne w `PATH`,
-- uprawnienia do używania zdjęć oraz danych źródłowych.
-
-Repo nie wymaga zewnętrznych pakietów Pythona.
-
-## Instalacja
-
-Z repozytorium instaluj wyłącznie przetestowaną rewizję. Docelowa lokalizacja:
+Wklej do Codexa link do repozytorium i poproś o instalację skilla:
 
 ```text
-$CODEX_HOME/skills/create-property-walkthrough
+Zainstaluj skill z repozytorium:
+https://github.com/FrameCoreWorks/framecore-works-property-walkthrough
 ```
 
-Instalacja odbywa się przez katalog tymczasowy w tym samym systemie plików. Przed atomowym opublikowaniem katalogu skilla sprawdzane są skróty plików i uruchamiany jest systemowy `quick_validate.py`.
-
-Po poprawnej instalacji Codex zadaje jedno pytanie o dostawcę. Przed tym pytaniem nie skanuje integracji, nie wyświetla nazw i niczego nie rekomenduje. Sam wybór dostawcy nie uruchamia generowania.
+Codex instaluje skill `create-property-walkthrough`. Przy pierwszym użyciu skill pyta o dostawcę bez skanowania, sugerowania ani wybierania integracji.
 
 ## Użycie
 
-Przykładowe wywołanie skilla:
+Po instalacji wywołaj skill w Codexie:
 
 ```text
 Użyj $create-property-walkthrough, aby zamienić link do ogłoszenia lub wgrane zdjęcia nieruchomości w projekt filmowej prezentacji.
 ```
 
-Nowy projekt można utworzyć poleceniem:
-
-```bash
-python "$CODEX_HOME/skills/create-property-walkthrough/scripts/init_project.py" --projects-root walkthrough-projects "Mieszkanie Łódź Centrum"
-```
-
-Każdy skrypt ma polski `--help`. Szczegółowy przebieg znajduje się w `skills/create-property-walkthrough/SKILL.md` i jego materiałach referencyjnych.
+Szczegółowy przebieg znajduje się w `skills/create-property-walkthrough/SKILL.md` i jego materiałach referencyjnych.
 
 ## Praca z linkiem
 
@@ -85,13 +73,7 @@ Po wygenerowaniu klipów poza Codexem można je zaimportować i wznowić proces 
 
 Po odpowiedzi użytkownika sprawdzany jest wyłącznie wskazany dostawca i wyłącznie wybrana metoda MCP albo API. Walidacja opiera się na oficjalnej dokumentacji, nie wykonuje testowej generacji i nie wysyła zdjęć.
 
-Profil bez sekretów jest przechowywany poza repo w:
-
-```text
-$CODEX_HOME/state/create-property-walkthrough/provider-profile.json
-```
-
-Sekret pozostaje w bezpiecznym magazynie, pęku kluczy albo zmiennej środowiskowej. Repozytorium, profile, manifesty i logi przechowują tylko nazwę referencji do sekretu.
+Codex przechowuje profil bez sekretów poza repozytorium. Repozytorium, profile, manifesty i logi przechowują tylko nazwę bezpiecznej referencji do sekretu, nigdy jego wartość.
 
 ## Zgoda na generowanie i koszt
 
@@ -139,13 +121,10 @@ Plan i decyzje projektowe znajdują się w [`docs/design-synthesis.md`](docs/des
 
 FrameCore Works Property Walkthrough to niezależnie opracowany skill Codexa, koncepcyjnie i architektonicznie inspirowany projektem RE Walkthrough Pro autorstwa Charlesa J. Dove'a. Projekt nie jest forkiem i nie zachowuje ani nie modyfikuje historii Git oryginalnego repozytorium.
 
-- [RE Walkthrough Pro](https://github.com/charlesdove977/re-walkthrough-pro)
-- [Licencja projektu źródłowego](https://github.com/charlesdove977/re-walkthrough-pro/blob/62b988b714576ef81aea79f34cc1f25de36c2b5e/LICENSE)
-- [Zachowana licencja MIT projektu źródłowego](licenses/re-walkthrough-pro-MIT.txt)
-- [Informacje o materiałach zewnętrznych](THIRD_PARTY_NOTICES.md)
+Podziękowania dla Charlesa J. Dove'a za publiczne udostępnienie projektu [RE Walkthrough Pro](https://github.com/charlesdove977/re-walkthrough-pro), który posłużył jako źródło wiedzy i inspiracja dla ogólnej koncepcji workflow.
 
 Nie istnieje partnerstwo, poparcie ani afiliacja z autorem projektu referencyjnego.
 
 ## Licencja
 
-Niezależna implementacja FrameCore Works jest dostępna na licencji MIT. Zobacz [`LICENSE`](LICENSE).
+Niezależna implementacja FrameCore Works jest dostępna na własnej licencji MIT. Zobacz [`LICENSE`](LICENSE).

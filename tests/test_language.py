@@ -33,6 +33,7 @@ class TestLanguage(unittest.TestCase):
             "extract_listing.py",
             "ingest_images.py",
             "make_contact_sheet.py",
+            "apply_image_analysis.py",
             "prepare_generation_package.py",
             "configure_provider.py",
             "validate_provider.py",

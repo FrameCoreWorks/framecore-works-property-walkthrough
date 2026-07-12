@@ -8,7 +8,6 @@ from pathlib import Path
 import shutil
 import stat
 import struct
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -22,34 +21,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 import ingest_images as ingestion  # noqa: E402
 from _common import ProjectStateError  # noqa: E402
-
-
-def _make_image(path: Path, *, color: str = "red", size: str = "96x64") -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-hide_banner",
-            "-nostdin",
-            "-y",
-            "-v",
-            "error",
-            "-f",
-            "lavfi",
-            "-i",
-            "color=c={}:s={}:r=1".format(color, size),
-            "-frames:v",
-            "1",
-            "-update",
-            "1",
-            str(path),
-        ],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=True,
-        timeout=30,
-    )
+from tests._media_fixtures import make_image as _make_image  # noqa: E402
 
 
 def _zip(path: Path, entries: list[tuple[str, bytes]], *, compression: int = zipfile.ZIP_DEFLATED) -> None:

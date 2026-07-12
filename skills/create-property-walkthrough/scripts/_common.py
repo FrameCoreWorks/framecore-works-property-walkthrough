@@ -20,8 +20,13 @@ from typing import Any, Callable, Dict, Iterable, Iterator, Union
 
 try:
     import fcntl
-except ImportError:  # pragma: no cover - fcntl jest częścią runtime macOS/Linux.
+except ImportError:  # pragma: no cover - niedostępne w natywnym runtime Windows.
     fcntl = None  # type: ignore
+
+try:
+    import msvcrt
+except ImportError:  # pragma: no cover - dostępne wyłącznie w natywnym runtime Windows.
+    msvcrt = None  # type: ignore
 
 
 PathLike = Union[str, os.PathLike]
@@ -181,16 +186,16 @@ def validate_project_root(project_root: PathLike, must_exist: bool = True) -> Pa
 def exclusive_project_lock(project_root: PathLike) -> Iterator[None]:
     """Zablokuj modyfikacje manifestu projektu na czas całej transakcji.
 
-    Blokada ``flock`` obejmuje pełne read-check-validate-write. Plik blokady
-    pozostaje w katalogu projektu, lecz nie zawiera żadnych danych.
+    Natywna blokada systemu obejmuje pełne read-check-validate-write. Plik
+    blokady pozostaje w katalogu projektu i nie zawiera danych użytkownika.
     """
 
     root = validate_project_root(project_root)
     if _PROJECT_LOCK_HELD.get():
         raise ProjectStateError("Zagnieżdżona blokada manifestu projektu jest niedozwolona.")
-    if fcntl is None:
+    if fcntl is None and msvcrt is None:
         raise ProjectStateError(
-            "Ten system nie obsługuje wymaganej blokady projektu fcntl.flock."
+            "Runtime nie udostępnia natywnej blokady plikowej wymaganej przez projekt."
         )
     lock_path = root / ".project.lock"
     if lock_path.is_symlink():
@@ -201,6 +206,8 @@ def exclusive_project_lock(project_root: PathLike) -> Iterator[None]:
         flags |= os.O_CLOEXEC
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
+    if hasattr(os, "O_BINARY"):
+        flags |= os.O_BINARY
     try:
         descriptor = os.open(str(lock_path), flags, 0o600)
     except OSError as exc:
@@ -212,7 +219,14 @@ def exclusive_project_lock(project_root: PathLike) -> Iterator[None]:
         if not stat.S_ISREG(os.fstat(descriptor).st_mode):
             raise ProjectStateError("Plik blokady projektu nie jest zwykłym plikiem.")
         try:
-            fcntl.flock(descriptor, fcntl.LOCK_EX)
+            if fcntl is not None:
+                fcntl.flock(descriptor, fcntl.LOCK_EX)
+            else:
+                if os.fstat(descriptor).st_size == 0:
+                    os.write(descriptor, b"\0")
+                    os.fsync(descriptor)
+                os.lseek(descriptor, 0, os.SEEK_SET)
+                msvcrt.locking(descriptor, msvcrt.LK_LOCK, 1)
             locked = True
             lock_token = _PROJECT_LOCK_HELD.set(True)
         except OSError as exc:
@@ -222,7 +236,11 @@ def exclusive_project_lock(project_root: PathLike) -> Iterator[None]:
         finally:
             if locked:
                 try:
-                    fcntl.flock(descriptor, fcntl.LOCK_UN)
+                    if fcntl is not None:
+                        fcntl.flock(descriptor, fcntl.LOCK_UN)
+                    else:
+                        os.lseek(descriptor, 0, os.SEEK_SET)
+                        msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
                 except OSError:
                     pass
             if lock_token is not None:
@@ -278,6 +296,9 @@ def load_json(path: PathLike) -> Any:
 
 def _fsync_directory(directory: Path) -> None:
     """Utrwal metadane katalogu, jeżeli system to obsługuje."""
+
+    if os.name == "nt":
+        return
 
     flags = os.O_RDONLY
     if hasattr(os, "O_DIRECTORY"):

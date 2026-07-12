@@ -360,6 +360,7 @@ def _build_scene(
         "aspect_ratio": ratio,
         "deformation_risk": asset.get("deformation_risk", "medium"),
         "vertical_strategy": asset.get("vertical_strategy", "contain"),
+        "vertical_anchor": asset.get("vertical_anchor", "center"),
         "status": "ready",
     }
     scene["prompt_en"] = build_i2v_prompt(scene)
@@ -404,6 +405,7 @@ def _plan_dependency_inputs(
                 "camera_move": asset.get("camera_move"),
                 "deformation_risk": asset.get("deformation_risk", "medium"),
                 "vertical_strategy": asset.get("vertical_strategy", "contain"),
+                "vertical_anchor": asset.get("vertical_anchor", "center"),
             }
             for asset in assets
         ],

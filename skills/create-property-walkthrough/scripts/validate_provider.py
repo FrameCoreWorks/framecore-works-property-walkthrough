@@ -14,6 +14,7 @@ from _schema import DocumentValidationError, load_schema, validate_document
 from configure_provider import (
     CONNECTION_METHODS,
     ProviderConfigurationError,
+    looks_like_secret_value,
     validate_secret_reference,
 )
 
@@ -85,6 +86,10 @@ def validate_profile_data(
     name = profile.get("provider_name")
     if not isinstance(name, str) or not name or name != name.strip():
         raise ProviderValidationError("Profil nie zawiera dokładnej nazwy dostawcy.")
+    if looks_like_secret_value(name):
+        raise ProviderValidationError(
+            "Nazwa dostawcy przypomina wartość sekretu i nie może zostać zapisana w profilu."
+        )
     if expected_provider_name is not None and name != expected_provider_name:
         raise ProviderValidationError("Profil dotyczy innego dostawcy niż wskazany.")
     if profile.get("connection_method") not in CONNECTION_METHODS:

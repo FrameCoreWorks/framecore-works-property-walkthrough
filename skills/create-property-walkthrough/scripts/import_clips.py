@@ -415,11 +415,19 @@ def record_quality_control(
     *,
     issues: Optional[Sequence[str]] = None,
     notes_pl: str = "",
+    source_comparison_performed: bool = False,
+    comparison_evidence_pl: str = "",
 ) -> Dict[str, Any]:
     """Zapisuje ręczny QC i blokuje akceptację krytycznych błędów geometrii."""
 
     if status not in QC_STATUSES:
         raise ClipImportError("Niepoprawny status kontroli jakości.")
+    if not isinstance(source_comparison_performed, bool):
+        raise ClipImportError("Informacja o porównaniu ze źródłem musi być wartością logiczną.")
+    if source_comparison_performed and not comparison_evidence_pl.strip():
+        raise ClipImportError(
+            "Wykonane porównanie ze źródłem wymaga krótkiego opisu dowodu."
+        )
     normalized_issues = sorted(
         {str(issue).strip() for issue in (issues or []) if str(issue).strip()}
     )
@@ -467,6 +475,8 @@ def record_quality_control(
     record["qc_status"] = status
     record["qc_issues"] = normalized_issues
     record["qc_notes_pl"] = notes_pl
+    record["source_comparison_performed"] = source_comparison_performed
+    record["comparison_evidence_pl"] = comparison_evidence_pl.strip()
     record["qc_reviewed_at"] = utc_now()
     if status == "approved":
         qc[scene_id] = {
@@ -475,6 +485,8 @@ def record_quality_control(
             "selected_revision": revision,
             "selected_sha256": record["sha256"],
             "input_dependency_hash": record.get("input_dependency_hash"),
+            "source_comparison_performed": source_comparison_performed,
+            "comparison_evidence_pl": comparison_evidence_pl.strip(),
             "reviewed_at": utc_now(),
         }
     elif (
@@ -518,7 +530,9 @@ def record_quality_control(
     approved_scene_ids = {
         scene_key
         for scene_key, value in qc.items()
-        if isinstance(value, dict) and value.get("status") == "approved"
+        if isinstance(value, dict)
+        and value.get("status") == "approved"
+        and value.get("source_comparison_performed") is True
     }
     stages = project.setdefault("stages", {})
     if isinstance(stages, dict):
@@ -541,7 +555,8 @@ def record_quality_control(
         "issues": normalized_issues,
         "critical_issues": critical,
         "notes_pl": notes_pl,
-        "source_comparison_performed": status != "needs-manual-review",
+        "source_comparison_performed": source_comparison_performed,
+        "comparison_evidence_pl": comparison_evidence_pl.strip(),
         "reviewed_at": record["qc_reviewed_at"],
     }
     report_path = root / "reports" / "qc" / scene_id / f"rev-{revision:03d}" / "review.json"
@@ -601,6 +616,16 @@ def build_parser() -> argparse.ArgumentParser:
     qc_command.add_argument("--status", required=True, choices=QC_STATUSES)
     qc_command.add_argument("--issue", action="append", default=[])
     qc_command.add_argument("--notes", default="")
+    qc_command.add_argument(
+        "--source-comparison-performed",
+        action="store_true",
+        help="Potwierdź wykonanie porównania klipu ze zdjęciem źródłowym.",
+    )
+    qc_command.add_argument(
+        "--comparison-evidence",
+        default="",
+        help="Krótki opis dowodu porównania ze źródłem.",
+    )
     return parser
 
 
@@ -627,6 +652,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 args.status,
                 issues=args.issue,
                 notes_pl=args.notes,
+                source_comparison_performed=args.source_comparison_performed,
+                comparison_evidence_pl=args.comparison_evidence,
             )
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         return 0

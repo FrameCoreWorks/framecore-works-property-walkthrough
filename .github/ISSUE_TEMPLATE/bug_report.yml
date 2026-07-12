@@ -1,0 +1,42 @@
+name: Zgłoszenie błędu
+description: Zgłoś odtwarzalny problem w skillu lub jego helperach.
+title: "[Błąd]: "
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: Nie wklejaj sekretów, danych dostępowych ani prywatnych materiałów klientów.
+  - type: textarea
+    id: description
+    attributes:
+      label: Opis problemu
+      description: Co się wydarzyło i czego oczekiwano?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Kroki odtworzenia
+      description: Podaj minimalne kroki oraz użyty tryb skilla.
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: System
+      options:
+        - Windows
+        - macOS
+        - Inny
+    validations:
+      required: true
+  - type: input
+    id: codex-version
+    attributes:
+      label: Wersja Codexa
+      description: Podaj wersję bez danych konta.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Bezpieczne logi lub dowody
+      description: Usuń ścieżki prywatne, tokeny, adresy, dane klientów i podpisane URL-e.

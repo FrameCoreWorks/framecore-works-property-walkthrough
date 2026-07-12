@@ -2,9 +2,9 @@
 
 ## Kolejność
 
-Nie sprawdzaj zainstalowanych MCP, API, connectorów ani providerów przed instalacją skilla i poniższym pytaniem. Nie pokazuj nazw, przykładów, list, przycisków, rekomendacji ani defaultu.
+Nie sprawdzaj zainstalowanych MCP, API, connectorów ani providerów przed poniższym pytaniem. Nie pokazuj nazw, przykładów, list, przycisków, rekomendacji ani defaultu.
 
-Po poprawnej instalacji zadaj dokładnie i jako jedyne pytanie wyboru:
+Przy pierwszym użyciu po instalacji zadaj dokładnie i jako jedyne pytanie wyboru:
 
 > Jakiego dostawcę MCP lub API chcesz skonfigurować razem z tym skillem, aby umożliwić automatyczne generowanie klipów i całego contentu walkthrough? Podaj dokładną nazwę dostawcy oraz wybierz sposób połączenia: MCP albo API.
 
