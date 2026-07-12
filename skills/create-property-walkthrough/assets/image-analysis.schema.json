@@ -1,0 +1,146 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "project_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 40
+    },
+    "images": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "image_id": {
+            "type": "string",
+            "pattern": "^(?:img_)?[0-9a-f]{64}$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "relative_path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "asset_kind": {
+            "type": "string",
+            "enum": [
+              "photo",
+              "floor_plan",
+              "map",
+              "screenshot",
+              "portrait",
+              "logo",
+              "other"
+            ]
+          },
+          "room_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100
+          },
+          "room_instance_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100
+          },
+          "curation_status": {
+            "type": "string",
+            "enum": [
+              "selected",
+              "reserve",
+              "rejected"
+            ]
+          },
+          "technical_quality": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low",
+              "unusable"
+            ]
+          },
+          "animation_utility": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low",
+              "none"
+            ]
+          },
+          "deformation_risk": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "visible_spaces": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          "reasons_pl": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          }
+        },
+        "required": [
+          "image_id",
+          "sha256",
+          "relative_path",
+          "asset_kind",
+          "room_type",
+          "room_instance_id",
+          "curation_status",
+          "technical_quality",
+          "animation_utility",
+          "deformation_risk",
+          "visible_spaces",
+          "reasons_pl"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "project_id",
+    "generated_at",
+    "images",
+    "warnings"
+  ],
+  "additionalProperties": false
+}

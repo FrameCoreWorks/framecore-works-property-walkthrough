@@ -1,0 +1,221 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "project_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 40
+    },
+    "scenes": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "properties": {
+          "scene_id": {
+            "type": "string",
+            "pattern": "^scn_[a-z0-9]{12,32}$"
+          },
+          "sequence_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "source_image_id": {
+            "type": "string",
+            "pattern": "^(?:img_)?[0-9a-f]{64}$"
+          },
+          "source_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "source_path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "room_instance_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "room_type": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "aspect_ratio": {
+            "type": "string",
+            "enum": [
+              "16:9",
+              "9:16"
+            ]
+          },
+          "duration_seconds": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 30
+          },
+          "camera_motion": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "deformation_risk": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "vertical_strategy": {
+            "type": "string",
+            "enum": [
+              "anchored_crop",
+              "contain",
+              "padded_background",
+              "not_applicable"
+            ]
+          },
+          "prompt_en": {
+            "type": "string",
+            "minLength": 80,
+            "maxLength": 8000
+          },
+          "metadata_pl": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "status_note": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              }
+            },
+            "required": [
+              "title",
+              "status_note"
+            ],
+            "additionalProperties": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "planned",
+              "ready",
+              "invalidated",
+              "approved",
+              "regenerate",
+              "rejected",
+              "needs-manual-review"
+            ]
+          },
+          "dependency_hash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "scene_id",
+          "sequence_index",
+          "source_image_id",
+          "source_sha256",
+          "source_path",
+          "room_instance_id",
+          "room_type",
+          "aspect_ratio",
+          "duration_seconds",
+          "camera_motion",
+          "deformation_risk",
+          "vertical_strategy",
+          "prompt_en",
+          "metadata_pl",
+          "status",
+          "dependency_hash"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "tombstones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "scene_id": {
+            "type": "string",
+            "pattern": "^scn_[a-z0-9]{12,32}$"
+          },
+          "removed_at": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 40
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "last_sequence_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "source_image_id": {
+            "type": "string",
+            "pattern": "^(?:img_)?[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "scene_id",
+          "removed_at",
+          "reason",
+          "last_sequence_index",
+          "source_image_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "short_plan_reason": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 1000
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "project_id",
+    "revision",
+    "generated_at",
+    "scenes",
+    "tombstones",
+    "short_plan_reason",
+    "warnings"
+  ],
+  "additionalProperties": false
+}

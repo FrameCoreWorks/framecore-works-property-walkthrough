@@ -1,0 +1,21 @@
+{
+  "capabilities": {
+    "cost_status": "unknown",
+    "download": "unverified",
+    "durations_seconds": [],
+    "idempotency_key": "unverified",
+    "image_to_video": "unverified",
+    "polling": "unverified",
+    "ratios": [],
+    "submission": "unverified"
+  },
+  "connection_method": "",
+  "generation_authorized": false,
+  "official_sources": [],
+  "provider_name": "",
+  "schema_version": 1,
+  "secret_reference": "",
+  "status": "not_configured",
+  "verification_errors": [],
+  "verified_at": ""
+}

@@ -1,0 +1,315 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "manifest_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "project_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "listing-url",
+            "uploaded-images",
+            "directory",
+            "zip",
+            "hybrid",
+            "manual",
+            "synthetic"
+          ]
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2048
+        },
+        "domain": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 253
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "provenance": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "required": [
+        "name",
+        "mode",
+        "url",
+        "domain",
+        "metadata",
+        "provenance"
+      ],
+      "additionalProperties": false
+    },
+    "settings": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "stages": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "in_progress",
+          "complete",
+          "blocked",
+          "invalidated",
+          "not_applicable"
+        ]
+      }
+    },
+    "hashes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    },
+    "classifications": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "selected_images": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^(?:img_)?[0-9a-f]{64}$"
+      }
+    },
+    "scene_plan": {
+      "type": "object",
+      "properties": {
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scenes": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "properties": {
+              "scene_id": {
+                "type": "string",
+                "pattern": "^scn_[a-z0-9]{12,32}$"
+              },
+              "sequence_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "source_image_id": {
+                "type": "string",
+                "pattern": "^(?:img_)?[0-9a-f]{64}$"
+              }
+            },
+            "required": [
+              "scene_id",
+              "sequence_index",
+              "source_image_id"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "tombstones": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "scene_id": {
+                "type": "string",
+                "pattern": "^scn_[a-z0-9]{12,32}$"
+              },
+              "removed_at": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 40
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "last_sequence_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "source_image_id": {
+                "type": "string",
+                "pattern": "^(?:img_)?[0-9a-f]{64}$"
+              }
+            },
+            "required": [
+              "scene_id",
+              "removed_at",
+              "reason",
+              "last_sequence_index",
+              "source_image_id"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "revision",
+        "scenes",
+        "tombstones"
+      ],
+      "additionalProperties": false
+    },
+    "prompts": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "provider_profile": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "not_configured",
+            "pending_validation",
+            "validated",
+            "blocked"
+          ]
+        },
+        "snapshot_path": {
+          "type": "string",
+          "const": "provider/provider-profile.snapshot.json"
+        },
+        "snapshot_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "status",
+        "snapshot_path",
+        "snapshot_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "jobs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "clips": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "qc": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": [
+          "string",
+          "object"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": [
+          "string",
+          "object"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "timestamps": {
+      "type": "object",
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "minLength": 20,
+          "maxLength": 40
+        },
+        "updated_at": {
+          "type": "string",
+          "minLength": 20,
+          "maxLength": 40
+        }
+      },
+      "required": [
+        "created_at",
+        "updated_at"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "manifest_revision",
+    "project_id",
+    "source",
+    "settings",
+    "stages",
+    "hashes",
+    "classifications",
+    "selected_images",
+    "scene_plan",
+    "prompts",
+    "provider_profile",
+    "model",
+    "jobs",
+    "clips",
+    "qc",
+    "output",
+    "warnings",
+    "errors",
+    "timestamps"
+  ],
+  "additionalProperties": false
+}

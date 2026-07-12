@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta property="og:title" content="Tytuł zapasowy z Open Graph">
+  <meta property="og:image" content="https://cdn.example.pl/og-zdjecie.jpg">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Apartment",
+    "name": "Słoneczne mieszkanie w Łodzi",
+    "description": "Jasne wnętrze z żółtą ścianą.",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "ul. Żółta 4",
+      "postalCode": "90-001",
+      "addressLocality": "Łódź",
+      "addressCountry": "PL"
+    },
+    "offers": {"@type": "Offer", "price": 799000, "priceCurrency": "PLN"},
+    "floorSize": {"@type": "QuantitativeValue", "value": 57.5, "unitCode": "MTK"},
+    "numberOfRooms": 3,
+    "floorLevel": "2",
+    "image": [
+      "https://cdn.example.pl/salon.jpg",
+      "http://127.0.0.1/prywatne.jpg"
+    ]
+  }
+  </script>
+</head>
+<body>Treść publicznego ogłoszenia.</body>
+</html>
