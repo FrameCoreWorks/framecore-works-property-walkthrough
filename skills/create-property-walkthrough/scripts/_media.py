@@ -12,11 +12,14 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import stat
 import struct
 import subprocess
 import tempfile
-from typing import Any, Dict, Optional, Sequence, Union
+import threading
+import time
+from typing import Any, BinaryIO, Dict, List, Optional, Sequence, Union
 import uuid
 import zlib
 
@@ -25,6 +28,8 @@ DEFAULT_MAX_IMAGE_BYTES = 50 * 1024 * 1024
 DEFAULT_MAX_PIXELS = 100_000_000
 DEFAULT_MAX_DIMENSION = 32_768
 DEFAULT_MAX_HEADER_BYTES = 4 * 1024 * 1024
+DEFAULT_MAX_STDOUT_BYTES = 8 * 1024 * 1024
+DEFAULT_MAX_STDERR_BYTES = 1024 * 1024
 
 _JPEG_SOF_MARKERS = {
     0xC0,
@@ -279,38 +284,188 @@ def _diagnostic(stderr: str) -> str:
     return compact[-4000:]
 
 
-def run_checked(
+def _minimal_environment() -> Dict[str, str]:
+    """Zbuduj środowisko procesu bez sekretów i ustawień providerów."""
+
+    allowed = {
+        "COMSPEC",
+        "LANG",
+        "LC_ALL",
+        "NUMBER_OF_PROCESSORS",
+        "PATHEXT",
+        "PATH",
+        "SYSTEMROOT",
+        "TEMP",
+        "TMP",
+        "TMPDIR",
+        "WINDIR",
+    }
+    environment = {
+        key: value for key, value in os.environ.items() if key.upper() in allowed
+    }
+    if os.name != "nt":
+        environment["LC_ALL"] = "C"
+    return environment
+
+
+def _read_bounded_stream(
+    stream: BinaryIO,
+    limit: int,
+    chunks: List[bytes],
+    exceeded: threading.Event,
+) -> None:
+    """Odczytuj pipe bez blokady, zachowując najwyżej wskazany limit bajtów."""
+
+    total = 0
+    try:
+        while True:
+            chunk = stream.read(64 * 1024)
+            if not chunk:
+                break
+            remaining = max(0, limit - total)
+            if remaining:
+                chunks.append(chunk[:remaining])
+            total += len(chunk)
+            if total > limit:
+                exceeded.set()
+    finally:
+        stream.close()
+
+
+def _kill_process_tree(process: subprocess.Popen[bytes]) -> None:
+    """Przerwij lokalny proces i jego grupę bez używania powłoki."""
+
+    if process.poll() is not None:
+        return
+    try:
+        if os.name == "nt":
+            process.kill()
+        else:
+            os.killpg(process.pid, signal.SIGKILL)
+    except OSError:
+        try:
+            process.kill()
+        except OSError:
+            pass
+
+
+def _run_bounded(
     args: Sequence[str],
     *,
-    timeout: float = 60,
+    timeout: float,
     cwd: Optional[Union[os.PathLike[str], str]] = None,
-) -> subprocess.CompletedProcess[str]:
-    """Uruchom lokalne polecenie bez powłoki i zwróć jego tekstowy rezultat."""
+    max_stdout_bytes: int = DEFAULT_MAX_STDOUT_BYTES,
+    max_stderr_bytes: int = DEFAULT_MAX_STDERR_BYTES,
+) -> subprocess.CompletedProcess[bytes]:
+    """Uruchom argv-only proces z limitami czasu, środowiska i obu pipe'ów."""
 
     if not args or not all(isinstance(argument, str) and argument for argument in args):
         raise ValueError("Polecenie musi być niepustą listą niepustych argumentów tekstowych.")
     if timeout <= 0:
         raise ValueError("Limit czasu musi być dodatni.")
+    for label, value in (
+        ("stdout", max_stdout_bytes),
+        ("stderr", max_stderr_bytes),
+    ):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError("Limit {} musi być dodatnią liczbą całkowitą.".format(label))
+
     try:
-        result = subprocess.run(
+        process = subprocess.Popen(
             list(args),
             cwd=str(cwd) if cwd is not None else None,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=timeout,
-            check=False,
+            env=_minimal_environment(),
             shell=False,
+            start_new_session=os.name != "nt",
         )
     except FileNotFoundError as exc:
         raise MediaError("Nie znaleziono wymaganego programu: {}".format(args[0])) from exc
-    except subprocess.TimeoutExpired as exc:
-        raise MediaError("Polecenie przekroczyło limit czasu: {}".format(args[0])) from exc
     except OSError as exc:
         raise MediaError("Nie można uruchomić lokalnego programu: {}".format(args[0])) from exc
+
+    if process.stdout is None or process.stderr is None:
+        _kill_process_tree(process)
+        raise MediaError("Nie udało się utworzyć ograniczonych pipe'ów procesu.")
+
+    exceeded = threading.Event()
+    stdout_chunks: List[bytes] = []
+    stderr_chunks: List[bytes] = []
+    readers = [
+        threading.Thread(
+            target=_read_bounded_stream,
+            args=(process.stdout, max_stdout_bytes, stdout_chunks, exceeded),
+            daemon=True,
+        ),
+        threading.Thread(
+            target=_read_bounded_stream,
+            args=(process.stderr, max_stderr_bytes, stderr_chunks, exceeded),
+            daemon=True,
+        ),
+    ]
+    for reader in readers:
+        reader.start()
+
+    deadline = time.monotonic() + timeout
+    timed_out = False
+    while process.poll() is None:
+        if exceeded.is_set():
+            _kill_process_tree(process)
+            break
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            timed_out = True
+            _kill_process_tree(process)
+            break
+        exceeded.wait(min(0.05, remaining))
+
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        _kill_process_tree(process)
+        process.wait()
+    for reader in readers:
+        reader.join(timeout=5)
+    if any(reader.is_alive() for reader in readers):
+        raise MediaError("Nie udało się zamknąć pipe'ów zakończonego procesu.")
+    if timed_out:
+        raise MediaError("Polecenie przekroczyło limit czasu: {}".format(args[0]))
+    if exceeded.is_set():
+        raise MediaError("Polecenie przekroczyło limit danych wyjściowych: {}".format(args[0]))
+
+    return subprocess.CompletedProcess(
+        list(args),
+        process.returncode,
+        stdout=b"".join(stdout_chunks),
+        stderr=b"".join(stderr_chunks),
+    )
+
+
+def run_checked(
+    args: Sequence[str],
+    *,
+    timeout: float = 60,
+    cwd: Optional[Union[os.PathLike[str], str]] = None,
+    max_stdout_bytes: int = DEFAULT_MAX_STDOUT_BYTES,
+    max_stderr_bytes: int = DEFAULT_MAX_STDERR_BYTES,
+) -> subprocess.CompletedProcess[str]:
+    """Uruchom lokalne polecenie bez powłoki i z ograniczonym wynikiem."""
+
+    raw = _run_bounded(
+        args,
+        timeout=timeout,
+        cwd=cwd,
+        max_stdout_bytes=max_stdout_bytes,
+        max_stderr_bytes=max_stderr_bytes,
+    )
+    result = subprocess.CompletedProcess(
+        raw.args,
+        raw.returncode,
+        stdout=raw.stdout.decode("utf-8", errors="replace"),
+        stderr=raw.stderr.decode("utf-8", errors="replace"),
+    )
     if result.returncode != 0:
         raise MediaError(
             "Polecenie {} zakończyło się kodem {}: {}".format(
@@ -328,8 +483,11 @@ def run_ffmpeg(
     executable = shutil.which("ffmpeg")
     if executable is None:
         raise MediaError("Nie znaleziono systemowego programu ffmpeg.")
+    prefix = [executable, "-hide_banner", "-nostdin"]
+    if not any(argument in {"-v", "-loglevel"} for argument in args):
+        prefix.extend(["-loglevel", "error"])
     return run_checked(
-        [executable, "-hide_banner", "-nostdin"] + list(args), timeout=timeout
+        prefix + list(args), timeout=timeout
     )
 
 
@@ -488,27 +646,19 @@ def dhash_image(
         "gray",
         "pipe:1",
     ]
-    try:
-        result = subprocess.run(
-            command,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=timeout,
-            check=False,
-            shell=False,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise MediaError("Obliczanie dHash przekroczyło limit czasu.") from exc
-    except OSError as exc:
-        raise MediaError("Nie można uruchomić ffmpeg dla dHash.") from exc
+    expected_length = (hash_size + 1) * hash_size
+    result = _run_bounded(
+        command,
+        timeout=timeout,
+        max_stdout_bytes=expected_length,
+        max_stderr_bytes=DEFAULT_MAX_STDERR_BYTES,
+    )
     if result.returncode != 0:
         raise MediaError(
             "FFmpeg nie obliczył dHash: {}".format(
                 _diagnostic(result.stderr.decode("utf-8", errors="replace"))
             )
         )
-    expected_length = (hash_size + 1) * hash_size
     if len(result.stdout) != expected_length:
         raise MediaError("FFmpeg zwrócił niepełne dane pikseli dla dHash.")
 
@@ -541,6 +691,8 @@ def hamming_distance(left: str, right: str) -> int:
 __all__ = [
     "DEFAULT_MAX_IMAGE_BYTES",
     "DEFAULT_MAX_PIXELS",
+    "DEFAULT_MAX_STDERR_BYTES",
+    "DEFAULT_MAX_STDOUT_BYTES",
     "MediaError",
     "create_thumbnail",
     "dhash_image",

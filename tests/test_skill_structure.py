@@ -68,6 +68,7 @@ class TestSkillStructure(unittest.TestCase):
     def test_plugin_manifest_wskazuje_skill_i_nie_bundluje_providera(self):
         manifest = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["name"], "framecore-works-property-walkthrough")
+        self.assertEqual(manifest["version"], "1.0.1")
         self.assertEqual(manifest["skills"], "./skills/")
         self.assertIn("interface", manifest)
         self.assertIn("defaultPrompt", manifest["interface"])
@@ -106,6 +107,10 @@ class TestSkillStructure(unittest.TestCase):
         self.assertIn("windows-latest", tekst)
         self.assertIn("macos-latest", tekst)
         self.assertIn("permissions:\n  contents: read", tekst)
+        self.assertNotIn("actions/checkout@v", tekst)
+        self.assertNotIn("actions/setup-python@v", tekst)
+        self.assertRegex(tekst, r"actions/checkout@[0-9a-f]{40} # v6")
+        self.assertRegex(tekst, r"actions/setup-python@[0-9a-f]{40} # v6")
 
 
 if __name__ == "__main__":

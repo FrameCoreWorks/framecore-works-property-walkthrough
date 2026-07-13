@@ -23,6 +23,7 @@
         "not_configured",
         "pending_validation",
         "validated",
+        "stale",
         "blocked"
       ]
     },

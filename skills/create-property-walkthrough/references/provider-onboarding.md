@@ -29,3 +29,9 @@ Nie wymyślaj endpointów, narzędzi, modeli i pól. Nie sprawdzaj alternatyw. N
 Zapisuj lokalny profil w `$CODEX_HOME/state/create-property-walkthrough/provider-profile.json`. Przechowuj nazwę, metodę, capabilities, oficjalne źródła, zweryfikowane ograniczenia, datę, status i nazwę referencji do sekretu. Nie przechowuj wartości sekretu.
 
 Status `blocked` oznacza bezpieczne zatrzymanie, a nie ukończenie lub zgodę na substytucję providera.
+
+## Ważność i reset profilu
+
+Profil `validated` pozostaje ważny najwyżej 7 dni przed płatnym lub zewnętrznym wykonaniem. Po przekroczeniu tego okresu `scripts/validate_provider.py` zapisuje status `stale`, a wykonanie pozostaje zablokowane do ponownej walidacji oficjalnych źródeł dla dokładnie wskazanego dostawcy.
+
+Użyj `scripts/configure_provider.py reset`, aby atomowo przywrócić profil do `not_configured`. Reset nie skanuje integracji, nie usuwa projektów i nie wybiera dostawcy zastępczego.

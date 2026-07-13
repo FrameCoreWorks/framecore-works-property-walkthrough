@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+from datetime import datetime, timedelta, timezone
 import io
 import json
 import sys
@@ -23,13 +24,17 @@ from configure_provider import (  # noqa: E402
     GENERATION_CONSENT_QUESTION,
     PROVIDER_QUESTION,
     UNKNOWN_COST_MESSAGE,
+    build_unconfigured_profile,
     build_provider_profile,
     configure_provider,
     ProviderConfigurationError,
     main as configure_main,
+    reset_provider_profile,
 )
 from validate_provider import (  # noqa: E402
+    DEFAULT_PROFILE_MAX_AGE_DAYS,
     ProviderValidationError,
+    profile_freshness,
     validate_profile_data,
     validate_profile_file,
 )
@@ -179,6 +184,50 @@ class ProviderOnboardingTests(unittest.TestCase):
         profile["provider_name"] = secret_like_name
         with self.assertRaisesRegex(ProviderValidationError, "przypomina wartość sekretu"):
             validate_profile_data(profile, require_verified=True)
+
+    def test_przeterminowany_profil_jest_zapisywany_jako_stale(self) -> None:
+        now = datetime(2026, 7, 13, 12, 0, tzinfo=timezone.utc)
+        profile = validated_profile_data()
+        profile["verified_at"] = (
+            now - timedelta(days=DEFAULT_PROFILE_MAX_AGE_DAYS, seconds=1)
+        ).isoformat().replace("+00:00", "Z")
+        profile_path = self.base / "provider-profile.json"
+        atomic_write_json(profile_path, profile)
+
+        self.assertEqual("stale", profile_freshness(profile, now=now))
+        with self.assertRaisesRegex(ProviderValidationError, "nieaktualny"):
+            validate_profile_file(profile_path, now=now)
+
+        persisted = load_json(profile_path)
+        self.assertEqual("stale", persisted["status"])
+        self.assertFalse(persisted["generation_authorized"])
+        self.assertTrue(persisted["verification_errors"])
+
+    def test_reset_profila_zapisuje_kanoniczny_stan_not_configured(self) -> None:
+        profile_path = self.base / "provider-profile.json"
+        atomic_write_json(profile_path, validated_profile_data())
+
+        destination = reset_provider_profile(output_path=profile_path)
+
+        self.assertEqual(profile_path, destination)
+        self.assertEqual(build_unconfigured_profile(), load_json(profile_path))
+        self.assertEqual("not_configured", load_json(profile_path)["status"])
+
+        configure_provider(
+            "Nowy Dostawca",
+            "MCP",
+            "mcp-oauth:nowy-dostawca",
+            output_path=profile_path,
+        )
+        self.assertEqual("Nowy Dostawca", load_json(profile_path)["provider_name"])
+
+    def test_okres_waznosci_musi_byc_dodatni(self) -> None:
+        with self.assertRaisesRegex(ProviderValidationError, "dodatnią liczbą dni"):
+            validate_profile_data(
+                validated_profile_data(),
+                require_verified=True,
+                max_age_days=0,
+            )
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timedelta, timezone
 import json
 import sys
 from pathlib import Path
@@ -29,6 +30,7 @@ REQUIRED_CAPABILITY_FIELDS = (
     "durations_seconds",
     "cost_status",
 )
+DEFAULT_PROFILE_MAX_AGE_DAYS = 7
 _FORBIDDEN_PROFILE_KEYS = {
     "api_key",
     "apikey",
@@ -49,6 +51,75 @@ class ProviderValidationError(ValueError):
 PROFILE_SCHEMA_PATH = (
     Path(__file__).resolve().parent.parent / "assets" / "provider-profile.schema.json"
 )
+
+
+def _profile_max_age(value: int) -> int:
+    """Waliduje dodatni okres ważności profilu w pełnych dniach."""
+
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ProviderValidationError("Okres ważności profilu musi być dodatnią liczbą dni.")
+    return value
+
+
+def _parse_verified_at(value: str) -> datetime:
+    """Odczytuje znacznik UTC profilu do świadomego obiektu datetime."""
+
+    if not isinstance(value, str) or not value:
+        raise ProviderValidationError("Profil nie zawiera czasu ostatniej weryfikacji.")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as error:
+        raise ProviderValidationError("Czas ostatniej weryfikacji ma niepoprawny format.") from error
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ProviderValidationError("Czas ostatniej weryfikacji musi zawierać strefę UTC.")
+    return parsed.astimezone(timezone.utc)
+
+
+def profile_freshness(
+    profile: Dict[str, Any],
+    *,
+    max_age_days: int = DEFAULT_PROFILE_MAX_AGE_DAYS,
+    now: Optional[datetime] = None,
+) -> str:
+    """Zwraca fresh, stale albo unverified dla lokalnego profilu dostawcy."""
+
+    days = _profile_max_age(max_age_days)
+    verified_at = profile.get("verified_at")
+    if not verified_at:
+        return "unverified"
+    checked = _parse_verified_at(verified_at)
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None or current.utcoffset() is None:
+        raise ProviderValidationError("Czas odniesienia musi zawierać strefę czasową.")
+    current = current.astimezone(timezone.utc)
+    if checked > current + timedelta(minutes=5):
+        raise ProviderValidationError("Czas weryfikacji profilu znajduje się w przyszłości.")
+    if current - checked > timedelta(days=days):
+        return "stale"
+    return "fresh"
+
+
+def mark_profile_stale(
+    profile: Dict[str, Any],
+    *,
+    max_age_days: int = DEFAULT_PROFILE_MAX_AGE_DAYS,
+    now: Optional[datetime] = None,
+) -> Dict[str, Any]:
+    """Oznacza przeterminowany validated profile jako stale i zamyka wykonanie."""
+
+    if profile.get("status") != "validated":
+        return dict(profile)
+    if profile_freshness(profile, max_age_days=max_age_days, now=now) != "stale":
+        return dict(profile)
+    updated = dict(profile)
+    updated["status"] = "stale"
+    updated["verification_errors"] = [
+        "Profil dostawcy wymaga ponownej walidacji po przekroczeniu {} dni.".format(
+            max_age_days
+        )
+    ]
+    updated["generation_authorized"] = False
+    return updated
 
 
 def _forbidden_paths(value: Any, prefix: str = "$") -> List[str]:
@@ -73,11 +144,14 @@ def validate_profile_data(
     *,
     expected_provider_name: Optional[str] = None,
     require_verified: bool = False,
+    max_age_days: int = DEFAULT_PROFILE_MAX_AGE_DAYS,
+    now: Optional[datetime] = None,
 ) -> Dict[str, Any]:
     """Waliduje profil i zwraca bezpieczny raport bez sekretów."""
 
     if not isinstance(profile, dict):
         raise ProviderValidationError("Profil musi być obiektem JSON.")
+    _profile_max_age(max_age_days)
     forbidden = _forbidden_paths(profile)
     if forbidden:
         raise ProviderValidationError(
@@ -104,8 +178,16 @@ def validate_profile_data(
     if missing:
         raise ProviderValidationError("Brakuje pól capabilities: " + ", ".join(missing))
     if require_verified:
+        if profile.get("status") == "stale":
+            raise ProviderValidationError(
+                "Profil dostawcy jest nieaktualny i wymaga ponownej walidacji."
+            )
         if profile.get("status") != "validated":
             raise ProviderValidationError("Profil nie ma statusu validated.")
+        if profile_freshness(profile, max_age_days=max_age_days, now=now) != "fresh":
+            raise ProviderValidationError(
+                "Profil dostawcy jest nieaktualny i wymaga ponownej walidacji."
+            )
         required_states = ("image_to_video", "submission", "polling", "download")
         unverified = [key for key in required_states if capabilities.get(key) is not True]
         if unverified:
@@ -170,6 +252,8 @@ def validate_profile_file(
     evidence_path: Optional[Path] = None,
     expected_provider_name: Optional[str] = None,
     snapshot_path: Optional[Path] = None,
+    max_age_days: int = DEFAULT_PROFILE_MAX_AGE_DAYS,
+    now: Optional[datetime] = None,
 ) -> Dict[str, Any]:
     """Waliduje plik oraz opcjonalnie zapisuje jawny snapshot bez sekretów."""
 
@@ -180,10 +264,24 @@ def validate_profile_file(
         evidence = load_json(evidence_path)
         profile = apply_local_evidence(profile, evidence)
         atomic_write_json(profile_path, profile)
+    elif profile.get("status") == "validated":
+        refreshed = mark_profile_stale(
+            profile,
+            max_age_days=max_age_days,
+            now=now,
+        )
+        if refreshed.get("status") == "stale":
+            profile = refreshed
+            atomic_write_json(profile_path, profile)
     report = validate_profile_data(
         profile,
         expected_provider_name=expected_provider_name,
-        require_verified=evidence_path is not None or profile.get("status") == "validated",
+        require_verified=(
+            evidence_path is not None
+            or profile.get("status") in {"validated", "stale"}
+        ),
+        max_age_days=max_age_days,
+        now=now,
     )
     if snapshot_path is not None:
         atomic_write_json(snapshot_path, profile)
@@ -212,6 +310,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Opcjonalna ścieżka kopii profilu w projekcie.",
     )
+    parser.add_argument(
+        "--max-age-days",
+        type=int,
+        default=DEFAULT_PROFILE_MAX_AGE_DAYS,
+        help="Maksymalny wiek zwalidowanego profilu przed ponowną walidacją.",
+    )
     return parser
 
 
@@ -225,6 +329,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             evidence_path=args.evidence,
             expected_provider_name=args.expected_name,
             snapshot_path=args.snapshot,
+            max_age_days=args.max_age_days,
         )
         print(json.dumps(report, ensure_ascii=False, sort_keys=True))
         return 0

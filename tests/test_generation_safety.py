@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from datetime import datetime, timedelta, timezone
 import socket
 import sys
 import tempfile
@@ -28,6 +29,7 @@ from prepare_upload_derivatives import (  # noqa: E402
     prepare_upload_derivatives,
 )
 from tests.test_provider_onboarding import validated_profile_data  # noqa: E402
+from validate_provider import ProviderValidationError  # noqa: E402
 from tests.test_scene_planning import (  # noqa: E402
     prepare_synthetic_project,
     require_ffmpeg,
@@ -207,6 +209,30 @@ class GenerationSafetyTests(unittest.TestCase):
         derivative.assert_not_called()
         self.assertFalse(
             (project_root / "generation-package" / "provider-batch-manifest.json").exists()
+        )
+
+    def test_przeterminowany_profil_blokuje_derivative_i_zapisuje_stale(self) -> None:
+        project_root = prepare_synthetic_project(self.base, 1)
+        profile_path = self._profile_path()
+        profile = load_json(profile_path)
+        profile["verified_at"] = (
+            datetime.now(timezone.utc) - timedelta(days=8)
+        ).isoformat().replace("+00:00", "Z")
+        atomic_write_json(profile_path, profile)
+
+        with self.assertRaisesRegex(ProviderValidationError, "nieaktualny"):
+            prepare_upload_derivatives(
+                project_root,
+                profile_path,
+                model_id="synthetic-model",
+                cost_status="known",
+                cost_amount=0,
+                budget=0,
+            )
+
+        self.assertEqual("stale", load_json(profile_path)["status"])
+        self.assertFalse(
+            (project_root / "generation-package" / "upload-derivatives").exists()
         )
 
     def test_sfabrykowany_manifest_z_kosztem_ponad_budzet_nie_przechodzi_bramki(self) -> None:

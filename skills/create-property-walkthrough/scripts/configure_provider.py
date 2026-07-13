@@ -107,6 +107,32 @@ def looks_like_secret_value(value: str) -> bool:
     )
 
 
+def build_unconfigured_profile() -> Dict[str, Any]:
+    """Buduje pusty profil zgodny ze schematem, bez danych dostawcy i sekretów."""
+
+    return {
+        "schema_version": PROFILE_SCHEMA_VERSION,
+        "provider_name": "",
+        "connection_method": "",
+        "status": "not_configured",
+        "capabilities": {
+            "image_to_video": "unverified",
+            "submission": "unverified",
+            "polling": "unverified",
+            "download": "unverified",
+            "idempotency_key": "unverified",
+            "ratios": [],
+            "durations_seconds": [],
+            "cost_status": "unknown",
+        },
+        "official_sources": [],
+        "secret_reference": "",
+        "verified_at": "",
+        "verification_errors": [],
+        "generation_authorized": False,
+    }
+
+
 def build_provider_profile(
     provider_name: str,
     connection_method: str,
@@ -133,7 +159,8 @@ def build_provider_profile(
     reference = validate_secret_reference(secret_reference)
 
     if existing_profile:
-        if existing_profile.get("provider_name") != provider_name:
+        existing_name = existing_profile.get("provider_name")
+        if existing_name and existing_name != provider_name:
             raise ProviderConfigurationError(
                 "Istniejący profil dotyczy innego dostawcy; jawnie utwórz osobny profil."
             )
@@ -189,6 +216,14 @@ def configure_provider(
     return destination
 
 
+def reset_provider_profile(*, output_path: Optional[Path] = None) -> Path:
+    """Resetuje profil atomowo do stanu not_configured bez usuwania katalogu stanu."""
+
+    destination = output_path or default_profile_path()
+    atomic_write_json(destination, build_unconfigured_profile())
+    return destination
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Buduje parser poleceń neutralnego onboardingu."""
 
@@ -221,6 +256,15 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Opcjonalna ścieżka profilu; domyślnie profil w CODEX_HOME/state.",
     )
+    reset = subparsers.add_parser(
+        "reset",
+        help="Wyzeruj profil do stanu not_configured bez usuwania pliku.",
+    )
+    reset.add_argument(
+        "--output",
+        type=Path,
+        help="Opcjonalna ścieżka profilu; domyślnie profil w CODEX_HOME/state.",
+    )
     return parser
 
 
@@ -232,6 +276,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     try:
         if args.command == "question":
             print(PROVIDER_QUESTION)
+            return 0
+        if args.command == "reset":
+            destination = reset_provider_profile(output_path=args.output)
+            print(
+                json.dumps(
+                    {"status": "not_configured", "profile_path": str(destination)},
+                    ensure_ascii=False,
+                )
+            )
             return 0
         destination = configure_provider(
             args.name,

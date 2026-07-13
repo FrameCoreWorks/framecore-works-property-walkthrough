@@ -29,7 +29,11 @@ from configure_provider import (
     GENERATION_CONSENT_QUESTION,
     UNKNOWN_COST_MESSAGE,
 )
-from validate_provider import ProviderValidationError, validate_profile_data
+from validate_provider import (
+    ProviderValidationError,
+    validate_profile_data,
+    validate_profile_file,
+)
 
 
 CONSENT_QUESTION = GENERATION_CONSENT_QUESTION
@@ -231,6 +235,7 @@ def prepare_upload_derivatives(
     project = load_json(root / "project.json")
     if not isinstance(project, dict):
         raise GenerationSafetyError("project.json musi być obiektem JSON.")
+    validate_profile_file(profile_path)
     profile = load_json(profile_path)
     if not isinstance(profile, dict):
         raise GenerationSafetyError("Profil dostawcy musi być obiektem JSON.")

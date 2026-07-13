@@ -223,6 +223,10 @@ class SemanticValidationTests(unittest.TestCase):
             "generation_authorized": False,
         }
         validate_document(configured, self.provider_schema, "provider-profile")
+        stale = copy.deepcopy(configured)
+        stale["status"] = "stale"
+        stale["verification_errors"] = ["Profil wymaga ponownej walidacji."]
+        validate_document(stale, self.provider_schema, "provider-profile")
         invalid = copy.deepcopy(configured)
         invalid["generation_authorized"] = True
         with self.assertRaises(DocumentValidationError):

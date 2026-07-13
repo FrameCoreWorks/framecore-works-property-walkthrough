@@ -560,7 +560,7 @@ def validate_provider_profile_semantics(document: Mapping[str, Any]) -> None:
             raise _validation_error("$.provider_name", "skonfigurowany profil wymaga dokładnej nazwy providera.")
         if method not in ("MCP", "API"):
             raise _validation_error("$.connection_method", "metoda musi mieć wartość MCP albo API.")
-        if status in ("pending_validation", "validated"):
+        if status in ("pending_validation", "validated", "stale"):
             if not isinstance(secret_reference, str) or SECRET_REFERENCE_PATTERN.fullmatch(secret_reference) is None:
                 raise _validation_error("$.secret_reference", "wymagana jest bezpieczna referencja do sekretu, nigdy sekret.")
         elif secret_reference:
@@ -583,6 +583,13 @@ def validate_provider_profile_semantics(document: Mapping[str, Any]) -> None:
             raise _validation_error("$.capabilities", "niezweryfikowane możliwości: " + ", ".join(missing))
         if not capabilities.get("ratios") or not capabilities.get("durations_seconds"):
             raise _validation_error("$.capabilities", "brakuje zweryfikowanych formatów albo czasów trwania.")
+    if status == "stale":
+        if not verified_at:
+            raise _validation_error("$.verified_at", "nieaktualny profil wymaga czasu poprzedniej weryfikacji.")
+        if not document.get("official_sources"):
+            raise _validation_error("$.official_sources", "nieaktualny profil wymaga poprzednich oficjalnych źródeł.")
+        if not document.get("verification_errors"):
+            raise _validation_error("$.verification_errors", "status stale wymaga informacji o ponownej walidacji.")
     if status == "blocked" and not document.get("verification_errors"):
         raise _validation_error("$.verification_errors", "status blocked wymaga konkretnego błędu weryfikacji.")
 
