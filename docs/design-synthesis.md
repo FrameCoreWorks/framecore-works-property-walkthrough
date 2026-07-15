@@ -8,7 +8,7 @@
 - Rynek i język użytkownika: Polska, język polski
 - Status: zaakceptowany do implementacji po Hipson Checkpoint 3
 - Data syntezy: 2026-07-11
-- Aktualizacja kontraktu dystrybucyjnego: 2026-07-15, wydanie 1.1.0
+- Aktualizacja kontraktu dystrybucyjnego: 2026-07-15, wydanie 1.1.1
 - Tryb realizacji: niezależna implementacja clean-room, skill-first
 
 ## Cel

@@ -27,16 +27,16 @@ class DistributionContractTests(unittest.TestCase):
             "https://github.com/FrameCoreWorks/framecore-works-property-walkthrough.git",
             entry["source"]["url"],
         )
-        self.assertEqual("v1.1.0", entry["source"]["ref"])
+        self.assertEqual("v1.1.1", entry["source"]["ref"])
         self.assertEqual("AVAILABLE", entry["policy"]["installation"])
         self.assertEqual("ON_USE", entry["policy"]["authentication"])
 
     def test_wersja_i_metadane_sa_spojne(self) -> None:
-        self.assertEqual("1.1.0", self.plugin["version"])
+        self.assertEqual("1.1.1", self.plugin["version"])
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("## 1.1.0 - 2026-07-15", changelog)
-        self.assertIn("--ref v1.1.0", readme)
+        self.assertIn("## 1.1.1 - 2026-07-15", changelog)
+        self.assertIn("--ref v1.1.1", readme)
         self.assertNotIn("Najpierw zapytaj mnie o dostawcę", json.dumps(self.plugin))
 
     def test_plugin_nie_bundluje_providera_mcp_ani_aplikacji(self) -> None:

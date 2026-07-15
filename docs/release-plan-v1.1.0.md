@@ -1,5 +1,10 @@
 # Plan wydania 1.1.0
 
+> Status historyczny: tag `v1.1.0` pozostaje niezmieniony, ale jego CI wykazało
+> brak przygotowania FFmpeg/ffprobe na czystych runnerach macOS i Ubuntu.
+> GitHub Release dla tej wersji nie został opublikowany. Poprawkę wydaje
+> `v1.1.1`, bez przesuwania tagu ani przepisywania historii.
+
 ## Cel
 
 Przygotować repozytorium do kontrolowanych testów użytkowników i dystrybucji jako jeden plugin zawierający jeden skill, bez duplikowania źródeł i bez instalatorów systemowych.

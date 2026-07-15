@@ -35,6 +35,18 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Udostępnij FFmpeg w środowisku testowym Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ffmpeg
+
+      - name: Udostępnij FFmpeg w środowisku testowym macOS
+        if: runner.os == 'macOS'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+        run: brew install ffmpeg
+
       - name: Udostępnij FFmpeg w środowisku testowym Windows
         if: runner.os == 'Windows'
         run: choco install ffmpeg --yes --no-progress
@@ -62,6 +74,11 @@ jobs:
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ matrix.python-version }}
+
+      - name: Udostępnij FFmpeg w środowisku testowym Linux
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ffmpeg
 
       - name: Sprawdź środowisko multimedialne
         run: python skills/create-property-walkthrough/scripts/preflight_environment.py --mode full_production --json

@@ -2,6 +2,15 @@
 
 Wszystkie istotne zmiany tego projektu są dokumentowane w tym pliku.
 
+## 1.1.1 - 2026-07-15
+
+### Naprawiono
+
+- wieloplatformowe CI jawnie przygotowuje FFmpeg i ffprobe przed pełnym
+  preflightem oraz testami multimedialnymi,
+- macOS, Windows, Ubuntu oraz macierz zgodności Python 3.9–3.13 sprawdzają ten
+  sam rzeczywisty kontrakt środowiska produkcyjnego.
+
 ## 1.1.0 - 2026-07-15
 
 ### Dodano

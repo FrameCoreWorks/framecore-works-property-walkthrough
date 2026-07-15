@@ -48,7 +48,7 @@ repozytoryjny katalog marketplace w `.agents/plugins/marketplace.json`.
 Dodaj marketplace przypięty do tego wydania, a następnie zainstaluj plugin:
 
 ```bash
-codex plugin marketplace add FrameCoreWorks/framecore-works-property-walkthrough --ref v1.1.0
+codex plugin marketplace add FrameCoreWorks/framecore-works-property-walkthrough --ref v1.1.1
 codex plugin add framecore-works-property-walkthrough@framecore-works
 ```
 
@@ -197,8 +197,8 @@ biblioteki standardowej Pythona oraz systemowych FFmpeg/ffprobe.
 
 Dokumentacja wykonawcza znajduje się w
 [`skills/create-property-walkthrough/SKILL.md`](skills/create-property-walkthrough/SKILL.md),
-a plan wydania 1.1.0 w
-[`docs/release-plan-v1.1.0.md`](docs/release-plan-v1.1.0.md).
+a plan wydania 1.1.1 w
+[`docs/release-plan-v1.1.1.md`](docs/release-plan-v1.1.1.md).
 
 ## Referencja koncepcyjna
 

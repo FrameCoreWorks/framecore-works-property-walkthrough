@@ -26,6 +26,7 @@ class TestSkillStructure(unittest.TestCase):
             ROOT / ".github" / "pull_request_template.md",
             ROOT / "docs" / "design-synthesis.md",
             ROOT / "docs" / "build-plan.md",
+            ROOT / "docs" / "release-plan-v1.1.1.md",
             SKILL / "scripts" / "preflight_environment.py",
             SKILL / "references" / "runtime-capabilities.md",
             SKILL / "references" / "production-brief.md",
@@ -78,7 +79,7 @@ class TestSkillStructure(unittest.TestCase):
     def test_plugin_manifest_wskazuje_skill_i_nie_bundluje_providera(self):
         manifest = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["name"], "framecore-works-property-walkthrough")
-        self.assertEqual(manifest["version"], "1.1.0")
+        self.assertEqual(manifest["version"], "1.1.1")
         self.assertEqual(manifest["skills"], "./skills/")
         self.assertIn("interface", manifest)
         self.assertIn("defaultPrompt", manifest["interface"])
@@ -125,6 +126,12 @@ class TestSkillStructure(unittest.TestCase):
         self.assertIn('tags: ["v*"]', tekst)
         self.assertIn("distribution:", tekst)
         self.assertIn("preflight_environment.py --mode full_production", tekst)
+        self.assertEqual(
+            2,
+            tekst.count("sudo apt-get install --yes --no-install-recommends ffmpeg"),
+        )
+        self.assertIn("brew install ffmpeg", tekst)
+        self.assertIn("choco install ffmpeg --yes --no-progress", tekst)
         self.assertNotIn("actions/checkout@v", tekst)
         self.assertNotIn("actions/setup-python@v", tekst)
         self.assertRegex(tekst, r"actions/checkout@[0-9a-f]{40} # v6")

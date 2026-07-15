@@ -288,4 +288,4 @@ plan_status: approved_for_execution_after_external_write_gate
 implementation_performed: true
 ```
 
-Warunek external write gate został spełniony 2026-07-11. Historyczny plan został wykonany i zaktualizowany o kontrakt dystrybucyjny 1.1.0. Bieżące bramki publikacji są zapisane w `docs/release-plan-v1.1.0.md`.
+Warunek external write gate został spełniony 2026-07-11. Historyczny plan został wykonany i zaktualizowany o kontrakt dystrybucyjny 1.1.x. Bieżące bramki publikacji są zapisane w `docs/release-plan-v1.1.1.md`.
