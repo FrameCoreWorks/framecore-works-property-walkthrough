@@ -11,7 +11,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 from html.parser import HTMLParser
-import ipaddress
 import json
 import math
 import os
@@ -22,43 +21,13 @@ import sys
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 from urllib.parse import urljoin, urlsplit
 
-try:
-    from _common import PolishArgumentParser, atomic_write_json, sha256_file
-except ImportError:  # Bezpieczny fallback dla izolowanego uruchomienia helpera.
-    import hashlib
-    import tempfile
-
-    PolishArgumentParser = argparse.ArgumentParser
-
-    def sha256_file(path: Union[os.PathLike[str], str]) -> str:
-        """Oblicz lokalnie SHA-256, gdy moduł projektu nie jest jeszcze dostępny."""
-
-        digest = hashlib.sha256()
-        with Path(path).open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-        return digest.hexdigest()
-
-    def atomic_write_json(path: Union[os.PathLike[str], str], data: Any) -> None:
-        """Zapisz JSON atomowo, gdy moduł projektu nie jest jeszcze dostępny."""
-
-        destination = Path(path)
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        descriptor, temporary = tempfile.mkstemp(
-            prefix=".{}-".format(destination.name), dir=str(destination.parent)
-        )
-        try:
-            with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
-                json.dump(data, handle, ensure_ascii=False, indent=2, sort_keys=True)
-                handle.write("\n")
-                handle.flush()
-                os.fsync(handle.fileno())
-            os.replace(temporary, destination)
-        finally:
-            try:
-                os.unlink(temporary)
-            except FileNotFoundError:
-                pass
+from _common import (
+    PolishArgumentParser,
+    ProjectStateError,
+    atomic_write_json,
+    sha256_file,
+    validate_public_http_url,
+)
 
 
 DEFAULT_MAX_SNAPSHOT_BYTES = 2 * 1024 * 1024
@@ -91,37 +60,12 @@ def validate_http_url(value: str) -> str:
     powierzchni, która zapisuje snapshot.
     """
 
-    if not isinstance(value, str) or not value or value != value.strip():
-        raise ListingExtractionError("URL musi być niepustym tekstem bez skrajnych spacji.")
-    if len(value) > 4096 or any(ord(character) < 32 for character in value):
-        raise ListingExtractionError("URL jest zbyt długi albo zawiera znaki sterujące.")
+    if not isinstance(value, str) or len(value) > 4096:
+        raise ListingExtractionError("URL musi być tekstem nie dłuższym niż 4096 znaków.")
     try:
-        parsed = urlsplit(value)
-        hostname = parsed.hostname
-        port = parsed.port
-    except ValueError as exc:
-        raise ListingExtractionError("URL ma nieprawidłową składnię.") from exc
-    if parsed.scheme.casefold() not in {"http", "https"}:
-        raise ListingExtractionError("Dozwolone są wyłącznie adresy HTTP i HTTPS.")
-    if not parsed.netloc or not hostname:
-        raise ListingExtractionError("URL musi zawierać nazwę hosta.")
-    if parsed.username is not None or parsed.password is not None:
-        raise ListingExtractionError("URL provenance nie może zawierać danych logowania.")
-    if parsed.fragment:
-        raise ListingExtractionError("URL provenance nie może zawierać fragmentu.")
-    if port is not None and not 1 <= port <= 65535:
-        raise ListingExtractionError("Port URL jest poza dozwolonym zakresem.")
-
-    normalized_host = hostname.rstrip(".").casefold()
-    if normalized_host == "localhost" or normalized_host.endswith(".localhost"):
-        raise ListingExtractionError("Lokalny host nie jest dozwolony jako provenance.")
-    try:
-        address = ipaddress.ip_address(normalized_host.strip("[]"))
-    except ValueError:
-        address = None
-    if address is not None and not address.is_global:
-        raise ListingExtractionError("Prywatny lub specjalny adres IP nie jest dozwolony.")
-    return value
+        return validate_public_http_url(value)
+    except ProjectStateError as exc:
+        raise ListingExtractionError(str(exc)) from exc
 
 
 class _SnapshotParser(HTMLParser):

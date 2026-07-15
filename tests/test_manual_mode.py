@@ -37,6 +37,21 @@ class ManualModeTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
+    @unittest.skipIf(sys.platform.startswith("win"), "Symlinki wymagają uprawnień Windows.")
+    def test_symlink_prompts_i_generation_package_blokuja_zapis(self) -> None:
+        for child in ("prompts", "generation-package"):
+            with self.subTest(child=child):
+                project_root = create_synthetic_project(self.base / child, 1)
+                blocked = project_root / child
+                outside = self.base / ("outside-" + child)
+                blocked.rmdir()
+                outside.mkdir()
+                blocked.symlink_to(outside, target_is_directory=True)
+
+                with self.assertRaisesRegex(ValueError, "dowiązaniem symbolicznym"):
+                    prepare_generation_package(project_root, duration_seconds=1.0)
+                self.assertEqual(list(outside.iterdir()), [])
+
     def test_pakiet_reczny_jest_kompletny_i_nie_wywoluje_dostawcy(self) -> None:
         project_root = create_synthetic_project(self.base, 2)
         with mock.patch.object(

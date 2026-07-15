@@ -18,8 +18,10 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 from _common import (
     PolishArgumentParser,
     atomic_write_json,
+    ensure_managed_directory,
     load_json,
     locked_project_mutation,
+    resolve_managed_output_path,
     resolve_project_path,
     sha256_file,
     utc_now,
@@ -635,10 +637,13 @@ def _copy_curated_image(project_root: Path, scene: Mapping[str, Any]) -> str:
 
     source = resolve_project_path(project_root, scene["source_path"], must_exist=True)
     suffix = source.suffix.lower() or ".img"
-    destination = project_root / "generation-package" / "curated-images" / (
-        f"{scene['scene_id']}{suffix}"
+    destination = resolve_managed_output_path(
+        project_root,
+        Path("generation-package") / "curated-images" / (
+            f"{scene['scene_id']}{suffix}"
+        ),
+        create_parent=True,
     )
-    destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists() and sha256_file(destination) == scene["source_sha256"]:
         return destination.relative_to(project_root).as_posix()
     temporary = destination.with_name(f".{destination.name}.{secrets.token_hex(6)}.tmp")
@@ -750,13 +755,19 @@ def prepare_generation_package(
     changed_scene_ids = _apply_selective_invalidation(project, old_scenes, plan["scenes"])
 
     prompt_document = _shot_list_document(project, plan)
-    prompts_dir = root / "prompts"
-    package_dir = root / "generation-package"
-    atomic_write_json(package_dir / "scene-plan.json", plan)
-    atomic_write_json(prompts_dir / "shot-list.json", prompt_document)
-    _atomic_write_text(prompts_dir / "shot-list.md", _markdown_shot_list(project, plan))
+    prompts_dir = ensure_managed_directory(root, "prompts")
+    package_dir = ensure_managed_directory(root, "generation-package")
+    scene_plan_path = resolve_managed_output_path(root, "generation-package/scene-plan.json")
+    shot_list_json = resolve_managed_output_path(root, "prompts/shot-list.json")
+    shot_list_markdown = resolve_managed_output_path(root, "prompts/shot-list.md")
+    atomic_write_json(scene_plan_path, plan)
+    atomic_write_json(shot_list_json, prompt_document)
+    _atomic_write_text(shot_list_markdown, _markdown_shot_list(project, plan))
     if include_csv:
-        _atomic_write_text(prompts_dir / "shot-list.csv", _csv_shot_list(plan))
+        _atomic_write_text(
+            resolve_managed_output_path(root, "prompts/shot-list.csv"),
+            _csv_shot_list(plan),
+        )
 
     entries: List[Dict[str, Any]] = []
     for scene in plan["scenes"]:
@@ -786,10 +797,13 @@ def prepare_generation_package(
     manifest = dict(manifest_core)
     manifest["package_fingerprint"] = _canonical_hash(manifest_core)
     manifest["created_at"] = utc_now()
-    atomic_write_json(package_dir / "generation-manifest.json", manifest)
+    generation_manifest_path = resolve_managed_output_path(
+        root, "generation-package/generation-manifest.json"
+    )
+    atomic_write_json(generation_manifest_path, manifest)
 
     prompt_hash = sha256_file(prompts_dir / "shot-list.json")
-    manifest_hash = sha256_file(package_dir / "generation-manifest.json")
+    manifest_hash = sha256_file(generation_manifest_path)
     project["scene_plan"] = {
         "revision": plan["revision"],
         "scenes": plan["scenes"],
@@ -806,7 +820,7 @@ def prepare_generation_package(
     hashes = project.setdefault("hashes", {})
     if not isinstance(hashes, dict):
         raise ScenePlanningError("Pole hashes w project.json musi być obiektem.")
-    scene_plan_hash = sha256_file(package_dir / "scene-plan.json")
+    scene_plan_hash = sha256_file(scene_plan_path)
     hashes["generation-package/scene-plan.json"] = scene_plan_hash
     hashes["prompts/shot-list.json"] = prompt_hash
     hashes["generation-package/generation-manifest.json"] = manifest_hash
@@ -828,7 +842,7 @@ def prepare_generation_package(
         "scene_ids": [scene["scene_id"] for scene in plan["scenes"]],
         "changed_scene_ids": changed_scene_ids,
         "short_plan_reason": plan.get("short_plan_reason"),
-        "manifest_path": str(package_dir / "generation-manifest.json"),
+        "manifest_path": str(generation_manifest_path),
         "provider_calls": 0,
     }
 

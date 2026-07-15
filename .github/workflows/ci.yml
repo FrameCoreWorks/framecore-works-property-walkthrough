@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -38,6 +39,9 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install ffmpeg --yes --no-progress
 
+      - name: Sprawdź środowisko multimedialne
+        run: python skills/create-property-walkthrough/scripts/preflight_environment.py --mode full_production --json
+
       - name: Uruchom testy
         run: python -m unittest discover -s tests -v
 
@@ -59,5 +63,30 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Sprawdź środowisko multimedialne
+        run: python skills/create-property-walkthrough/scripts/preflight_environment.py --mode full_production --json
+
       - name: Uruchom testy
         run: python -m unittest discover -s tests -v
+
+  distribution:
+    name: Kontrakt dystrybucji
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Pobierz repozytorium
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Ustaw Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Waliduj manifesty JSON
+        run: |
+          python -m json.tool .codex-plugin/plugin.json
+          python -m json.tool .agents/plugins/marketplace.json
+
+      - name: Sprawdź kontrakt dystrybucji
+        run: python -m unittest tests.test_distribution tests.test_skill_structure -v

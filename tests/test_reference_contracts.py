@@ -8,11 +8,6 @@ ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / "skills" / "create-property-walkthrough"
 REFERENCES = SKILL / "references"
 
-PROVIDER_QUESTION = (
-    "Jakiego dostawcę MCP lub API chcesz skonfigurować razem z tym skillem, "
-    "aby umożliwić automatyczne generowanie klipów i całego contentu walkthrough? "
-    "Podaj dokładną nazwę dostawcy oraz wybierz sposób połączenia: MCP albo API."
-)
 GENERATION_CONSENT = (
     "Czy wyrażasz zgodę na przesłanie wskazanych zdjęć do skonfigurowanego "
     "dostawcy i uruchomienie generowania zaplanowanych klipów walkthrough?"
@@ -22,17 +17,22 @@ COST_UNKNOWN = "Koszt generowania nie został zweryfikowany."
 
 
 class TestReferenceContracts(unittest.TestCase):
-    def test_dokladne_pytanie_o_dostawce(self):
+    def test_onboarding_jest_provider_neutralny(self):
         tekst = (REFERENCES / "provider-onboarding.md").read_text(encoding="utf-8")
-        self.assertIn(PROVIDER_QUESTION, tekst)
-        self.assertNotIn("na przykład", tekst.lower())
-        self.assertNotIn("domyślny dostawca", tekst.lower())
+        for mode in ("plan_only", "manual_clips", "full_production"):
+            self.assertIn(mode, tekst)
+        self.assertIn("Nie pytaj o dostawcę podczas zwykłego startu", tekst)
+        self.assertIn("Jeżeli użytkownik jawnie prosi", tekst)
+        self.assertIn("zapytaj o jeden główny priorytet", tekst)
+        self.assertIn("najwyżej trzy", tekst)
 
     def test_dokladne_pytania_o_zgode_i_koszt(self):
         tekst = (REFERENCES / "provider-execution.md").read_text(encoding="utf-8")
         self.assertIn(GENERATION_CONSENT, tekst)
         self.assertIn(COST_CONFIRMATION, tekst)
         self.assertIn(COST_UNKNOWN, tekst)
+        self.assertIn("`--session-nonce`", tekst)
+        self.assertIn("Nie używa prawdziwego identyfikatora wątku", tekst)
 
     def test_provider_references_nie_zawieraja_endpointow(self):
         tekst = "\n".join(

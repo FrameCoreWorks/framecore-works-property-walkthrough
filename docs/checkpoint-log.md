@@ -15,7 +15,7 @@ Ten plik zapisuje wyłącznie stan możliwy do odtworzenia z bieżącej historii
 - Repozytorium: `FrameCoreWorks/framecore-works-property-walkthrough`.
 - Origin: `https://github.com/FrameCoreWorks/framecore-works-property-walkthrough.git`.
 - Domyślna gałąź: `main`.
-- Widoczność: `PUBLIC`, zgodnie z dystrybucją skilla przez URL repozytorium.
+- Widoczność: `PUBLIC`, zgodnie z dystrybucją wersjonowanego pluginu przez repozytoryjny marketplace.
 - Fork: `false`.
 - Bazowy pełny `unittest discover` dla `b4f3b26`: 113 PASS, w tym syntetyczny provider-free E2E.
 - Zewnętrzne wywołania dostawców, API, uploady i generowanie podczas testów: 0.

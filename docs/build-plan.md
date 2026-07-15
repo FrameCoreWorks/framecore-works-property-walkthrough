@@ -4,7 +4,7 @@
 
 - Każdy etap kończy się testem fazy, testami regresyjnymi zależnych elementów, secret scanem i przeglądem diffu.
 - Niepowodzenie testu prowadzi do diagnozy i poprawki, nie do pominięcia kryterium.
-- Providerzy pozostają nieskanowani aż do P14A.
+- Providerzy pozostają nieskanowani do chwili, gdy użytkownik wybierze zewnętrzną generację albo jawnie poprosi o rekomendację.
 - Zewnętrzna generacja, upload i koszt nie są częścią testów implementacyjnych.
 - Push obejmuje wyłącznie przetestowany, czysty checkpoint.
 - SHA testowanego checkpointu jest wpisywany do kolejnego checkpointu; końcowy SHA trafia do handoveru.
@@ -19,9 +19,9 @@ P1A scaffold
 → pierwszy lokalny commit
 → P16 publiczny GitHub i bezpieczny origin
 → P17 checkpoint loop dla P2–P12
-→ P13 instalacja Codex Native
-→ P14A dokładne pytanie i oczekiwanie
-→ P14B onboarding tylko wskazanego dostawcy
+→ P13 dystrybucja pluginu przez marketplace
+→ P14A wykrycie środowiska i wybór trybu
+→ P14B warunkowy onboarding wskazanego dostawcy
 → P18 finalny audit
 ```
 
@@ -114,9 +114,9 @@ Każda faza zapisuje: cel, opis, pliki, zależności, skrypty, testy, polecenia 
 
 ## P7. Provider onboarding
 
-- Cel: przechować named-only profil bez sekretów i walidować go bez generowania.
+- Cel: zachować provider-neutral start i przechować profil bez sekretów dopiero dla wybranej zewnętrznej generacji.
 - Pliki: `configure_provider.py`, `validate_provider.py`, provider schema i reference.
-- Testy: dokładne pytanie, brak nazw/sugestii/skanu przed pytaniem, MCP/API, masking, secure secret reference, no-generation trap.
+- Testy: plan i manual mode bez providera, brak nazw/sugestii/skanu bez prośby, connector/MCP/API, masking, secure secret reference, no-generation trap.
 - Walidacja: `python -m unittest tests.test_provider_onboarding`.
 - Ryzyko: wyciek sekretu lub domyślna rekomendacja.
 - Ukończenie: profil przechodzi walidację albo bezpiecznie raportuje `blocked`.
@@ -172,27 +172,27 @@ Każda faza zapisuje: cel, opis, pliki, zależności, skrypty, testy, polecenia 
 - Ukończenie: cały suite przechodzi w czystym tempdir.
 - Downstream: P13 i checkpoint finalny implementacji.
 
-## P13. Instalacja Codex Native
+## P13. Dystrybucja ChatGPT/Codex
 
-- Cel: zapewnić instalację skilla bezpośrednio przez Codexa z repozytorium GitHub.
-- Pliki: `skills/create-property-walkthrough` oraz instrukcja instalacji w `README.md`.
-- Metoda: użytkownik przekazuje Codexowi URL repozytorium, a Codex instaluje odnaleziony skill.
-- Testy: poprawna struktura skilla, `quick_validate.py` oraz zgodność instrukcji README z modelem Codex Native.
-- Ryzyko: brak wykrycia katalogu skilla albo kolizja z istniejącą instalacją.
-- Ukończenie: Codex rozpoznaje i instaluje `create-property-walkthrough` z podanego repozytorium.
+- Cel: zapewnić wersjonowaną instalację pluginu z repozytorium GitHub przez obsługiwany katalog marketplace.
+- Pliki: `.codex-plugin/plugin.json`, `.agents/plugins/marketplace.json`, `skills/create-property-walkthrough` i instrukcja instalacji w `README.md`.
+- Metoda: użytkownik dodaje marketplace przypięty do taga wydania, a następnie instaluje plugin w Codex CLI albo z katalogu Plugins w obsługiwanej powierzchni ChatGPT desktop.
+- Testy: walidacja pluginu i skilla, zgodność manifestów, lokalna oraz zdalna symulacja instalacji i ponowny pełny suite z cache pluginu.
+- Ryzyko: niezgodna wersja taga, brak katalogu Plugins w danej powierzchni albo kolizja z istniejącą instalacją.
+- Ukończenie: czysty profil instaluje wersję przypiętą do taga, a zainstalowana kopia przechodzi testy.
 - Downstream: P14A.
 
-## P14A. Dokładne pytanie o dostawcę
+## P14A. Wykrycie środowiska i wybór trybu
 
-- Cel: po instalacji zadać jedyne pytanie wyboru dostawcy dokładnie według specyfikacji.
-- Test: exact string equality i brak listy, przykładów, nazw, rekomendacji oraz pre-scan.
-- Ukończenie: pytanie zadane i workflow czeka na odpowiedź.
-- Downstream: P14B po nowej wiadomości użytkownika.
+- Cel: po instalacji ustalić cel, materiały i tryb `plan_only`, `manual_clips` albo `full_production` bez wymuszania providera.
+- Test: provider-neutral start, read-only preflight, brak sieci, instalacji, zmian `PATH` i odczytu sekretów.
+- Ukończenie: workflow zna możliwości hosta i może uczciwie wybrać osiągalny rezultat.
+- Downstream: P14B tylko dla `full_production`.
 
-## P14B. Named-only onboarding
+## P14B. Warunkowy onboarding integracji
 
 - Cel: sprawdzić wyłącznie wskazanego dostawcę i wybraną metodę.
-- Zależności: dokładna nazwa i `MCP` albo `API` od użytkownika.
+- Zależności: wybór zewnętrznej generacji oraz connector, dokładna nazwa MCP/API od użytkownika albo jawna prośba o rekomendację po ustaleniu priorytetu.
 - Testy/dowody: oficjalne źródła dla auth, I2V, ratios, duration, submission, polling, download, kosztów; brak generacji i uploadu.
 - Ryzyko: dokumentacja niepełna lub niedostępna.
 - Ukończenie: profil zwalidowany albo status `blocked` z konkretnym brakiem. `blocked` nie oznacza completion.
@@ -228,16 +228,16 @@ Każda faza zapisuje: cel, opis, pliki, zależności, skrypty, testy, polecenia 
 | ID | Wymaganie | Faza | Artefakt | Test lub dowód | Kryterium ukończenia |
 |---|---|---|---|---|---|
 | R001 | Projekt od początku, bez forka | P1A/P16 | clean-room ledger, Git | brak upstream remote/objects, `isFork=false` | nowa historia |
-| R002 | Jeden instalowalny skill | P1B/P13 | `skills/create-property-walkthrough` | quick validate, instalacja Codex Native | skill działa |
+| R002 | Jeden instalowalny plugin i skill | P1B/P13 | manifesty, `skills/create-property-walkthrough` | walidatory, instalacja marketplace | plugin i skill działają |
 | R003 | Brak aplikacji/API/DB | P1B/P18 | struktura repo | tree audit | brak komponentów poza zakresem |
 | R004 | Pięć trybów wejścia | P4 | ingestion scripts | unit + E2E | każdy tryb zapisuje projekt |
 | R005 | Polska i publiczne listingi | P2/P4 | references, HTML fixtures | JSON-LD/OG/Unicode | dane z provenance/null |
 | R006 | Brak wyszukiwarki i bulk scrape | P2/P4 | workflow contract | zero-network helper test | pojedynczy snapshot |
 | R007 | Cinematic, nie 3D | P2/P6/README | wording i prompts | text contract test | brak obietnic 3D |
 | R008 | Neutralność providera | P7/P8 | profile schema | no-provider-name scan | brak adaptera domyślnego |
-| R009 | Dokładne pytanie po instalacji | P13/P14A | onboarding reference | exact string | pytanie identyczne |
-| R010 | Brak pre-scan/sugestii | P7/P14A | tests | forbidden-name/suggestion scan | zero pre-scan |
-| R011 | Tylko named provider | P14B | provider profile | source ledger named-only | brak alternatyw |
+| R009 | Provider-neutral start po instalacji | P13/P14A | onboarding reference | mode contract | brak wymuszonego providera |
+| R010 | Brak pre-scan/sugestii bez prośby | P7/P14A | tests | forbidden-name/suggestion scan | zero niezamówionych sugestii |
+| R011 | Provider tylko dla external generation | P14B | provider profile | conditional onboarding | plan/manual bez providera |
 | R012 | Credentials bezpieczne | P7/P18 | secret refs | canary/secret scan | brak sekretów w artefaktach |
 | R013 | Zgoda przed generowaniem | P8 | consent fingerprint | ambiguous/stale/changed tests | brak submit bez zgody |
 | R014 | Potwierdzenie kosztu | P8/P14B | cost record | unknown/retry tests | fail-closed |
@@ -273,7 +273,7 @@ Każda faza zapisuje: cel, opis, pliki, zależności, skrypty, testy, polecenia 
 | R044 | Render 9:16 bez stretch | P10/P12 | final MP4 | ffprobe/crop strategy | 1080×1920, SAR 1:1 |
 | R045 | Brak automatycznych dodatków/PII | P10 | render config | config/text tests | brak audio/overlay default |
 | R046 | Pełny provider-free E2E | P12 | synthetic project | socket deny/provider trap | zero external calls |
-| R047 | Instalacja Codex Native | P13 | repozytorium i skill | URL repo, quick validate | skill instalowany przez Codexa |
+| R047 | Instalacja ChatGPT/Codex | P13 | repozytorium, marketplace i plugin | clean-profile install, walidatory | tagowana wersja instalowalna |
 | R048 | GitHub FrameCoreWorks/public | P16 | remote metadata | gh owner/visibility/fork | dokładny publiczny target dystrybucyjny |
 | R049 | Tylko tested checkpoint push | P17 | checkpoint log | commands/tree SHA/remote SHA | każdy push attested |
 | R050 | Secret/user-asset/history scan | P17/P18 | scan logs | canary, path, git object scan | brak zakazanych danych |
@@ -285,7 +285,7 @@ Każda faza zapisuje: cel, opis, pliki, zależności, skrypty, testy, polecenia 
 checkpoint: HIPSON_CHECKPOINT_3
 final_gate: PASSED
 plan_status: approved_for_execution_after_external_write_gate
-implementation_performed: false
+implementation_performed: true
 ```
 
-Warunek external write gate został spełniony 2026-07-11. Implementacja może zacząć się od P1A po zapisaniu tego planu i ponownym sprawdzeniu braku konfliktu.
+Warunek external write gate został spełniony 2026-07-11. Historyczny plan został wykonany i zaktualizowany o kontrakt dystrybucyjny 1.1.0. Bieżące bramki publikacji są zapisane w `docs/release-plan-v1.1.0.md`.

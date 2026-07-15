@@ -37,6 +37,19 @@ class ResumeTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
+    @unittest.skipIf(sys.platform.startswith("win"), "Symlinki wymagają uprawnień Windows.")
+    def test_symlink_reports_blokuje_raport_poza_projektem(self) -> None:
+        project_root = prepare_synthetic_project(self.base, 1)
+        reports = project_root / "reports"
+        outside = self.base / "outside-reports"
+        reports.rmdir()
+        outside.mkdir()
+        reports.symlink_to(outside, target_is_directory=True)
+
+        with self.assertRaisesRegex(ValueError, "dowiązaniem symbolicznym"):
+            analyze_resume(project_root)
+        self.assertEqual(list(outside.iterdir()), [])
+
     def test_complete_project_resumes_at_complete_and_preserves_approved(self) -> None:
         project_root = prepare_approved_project(self.base, scene_count=2)
         render_walkthrough(project_root, include_vertical=True)

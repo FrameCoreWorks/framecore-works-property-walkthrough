@@ -16,14 +16,17 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 from _common import (
     PolishArgumentParser,
     atomic_write_json,
+    ensure_managed_directory,
     load_json,
     locked_project_mutation,
+    resolve_managed_output_path,
     resolve_project_path,
     sha256_file,
     utc_now,
     validate_project_root,
 )
 from _media import MediaError, ffprobe_json, run_ffmpeg
+from _schema import DocumentValidationError, validate_scene_id
 
 
 QC_STATUSES = ("approved", "regenerate", "rejected", "needs-manual-review")
@@ -44,6 +47,15 @@ MAX_CLIP_BYTES = 2 * 1024 * 1024 * 1024
 
 class ClipImportError(ValueError):
     """Oznacza błąd importu, integralności lub kontroli jakości klipu."""
+
+
+def _safe_scene_id(value: Any) -> str:
+    """Waliduje scene_id zanim identyfikator stanie się częścią ścieżki."""
+
+    try:
+        return validate_scene_id(value)
+    except DocumentValidationError as exc:
+        raise ClipImportError(str(exc)) from exc
 
 
 def _float_value(value: Any) -> Optional[float]:
@@ -260,8 +272,12 @@ def import_clip(
     """Importuje jedną rewizję i zachowuje wszystkie poprzednie rewizje."""
 
     root = validate_project_root(project_root)
-    source = clip_path.expanduser().resolve(strict=True)
-    if source.is_symlink() or not source.is_file():
+    scene_id = _safe_scene_id(scene_id)
+    source_input = Path(clip_path).expanduser()
+    if source_input.is_symlink():
+        raise ClipImportError("Klip wejściowy nie może być dowiązaniem symbolicznym.")
+    source = source_input.resolve(strict=True)
+    if not source.is_file():
         raise ClipImportError("Klip wejściowy musi być zwykłym plikiem.")
     if source.stat().st_size <= 0 or source.stat().st_size > MAX_CLIP_BYTES:
         raise ClipImportError("Rozmiar klipu jest pusty albo przekracza limit 2 GiB.")
@@ -298,8 +314,12 @@ def import_clip(
     suffix = source.suffix.lower()
     if suffix not in {".mp4", ".mov", ".mkv", ".webm"}:
         raise ClipImportError("Nieobsługiwane rozszerzenie klipu.")
-    destination = root / "scenes" / "imported" / scene_id / (
-        f"rev-{revision:03d}-{clip_hash[:12]}{suffix}"
+    destination = resolve_managed_output_path(
+        root,
+        Path("scenes") / "imported" / scene_id / (
+            f"rev-{revision:03d}-{clip_hash[:12]}{suffix}"
+        ),
+        create_parent=True,
     )
     _copy_clip_append_only(source, destination, clip_hash)
 
@@ -309,7 +329,9 @@ def import_clip(
     duration = summary.get("duration_seconds")
     sample_paths: List[str] = []
     if isinstance(duration, (int, float)) and duration > 0 and summary.get("video_stream_count"):
-        samples_dir = root / "reports" / "qc" / scene_id / f"rev-{revision:03d}" / "frames"
+        samples_dir = ensure_managed_directory(
+            root, Path("reports") / "qc" / scene_id / f"rev-{revision:03d}" / "frames"
+        )
         absolute_samples = _extract_sample_frames(destination, samples_dir, float(duration))
         sample_paths = [
             Path(path).relative_to(root).as_posix() for path in absolute_samples
@@ -373,7 +395,11 @@ def import_clip(
         "visual_comparison_required": True,
         "created_at": utc_now(),
     }
-    report_path = root / "reports" / "qc" / scene_id / f"rev-{revision:03d}" / "technical.json"
+    report_path = resolve_managed_output_path(
+        root,
+        Path("reports") / "qc" / scene_id / f"rev-{revision:03d}" / "technical.json",
+        create_parent=True,
+    )
     atomic_write_json(report_path, technical_report)
     atomic_write_json(root / "project.json", project)
     return record
@@ -399,8 +425,13 @@ def _publish_approved_copy(project_root: Path, record: Mapping[str, Any]) -> str
 
     source = resolve_project_path(project_root, record["path"], must_exist=True)
     suffix = source.suffix.lower()
-    destination = project_root / "scenes" / "approved" / str(record["scene_id"]) / (
-        f"rev-{int(record['revision']):03d}-{str(record['sha256'])[:12]}{suffix}"
+    scene_id = _safe_scene_id(record.get("scene_id"))
+    destination = resolve_managed_output_path(
+        project_root,
+        Path("scenes") / "approved" / scene_id / (
+            f"rev-{int(record['revision']):03d}-{str(record['sha256'])[:12]}{suffix}"
+        ),
+        create_parent=True,
     )
     _copy_clip_append_only(source, destination, str(record["sha256"]))
     return destination.relative_to(project_root).as_posix()
@@ -420,6 +451,7 @@ def record_quality_control(
 ) -> Dict[str, Any]:
     """Zapisuje ręczny QC i blokuje akceptację krytycznych błędów geometrii."""
 
+    scene_id = _safe_scene_id(scene_id)
     if status not in QC_STATUSES:
         raise ClipImportError("Niepoprawny status kontroli jakości.")
     if not isinstance(source_comparison_performed, bool):
@@ -559,7 +591,11 @@ def record_quality_control(
         "comparison_evidence_pl": comparison_evidence_pl.strip(),
         "reviewed_at": record["qc_reviewed_at"],
     }
-    report_path = root / "reports" / "qc" / scene_id / f"rev-{revision:03d}" / "review.json"
+    report_path = resolve_managed_output_path(
+        root,
+        Path("reports") / "qc" / scene_id / f"rev-{revision:03d}" / "review.json",
+        create_parent=True,
+    )
     atomic_write_json(report_path, report)
     atomic_write_json(root / "project.json", project)
     return report
@@ -575,15 +611,18 @@ def import_expected_clips(
     project = load_json(root / "project.json")
     if not isinstance(project, dict):
         raise ClipImportError("project.json musi być obiektem JSON.")
-    directory = clips_directory.expanduser().resolve(strict=True)
-    if not directory.is_dir() or directory.is_symlink():
+    directory_input = Path(clips_directory).expanduser()
+    if directory_input.is_symlink():
+        raise ClipImportError("Katalog klipów nie może być dowiązaniem symbolicznym.")
+    directory = directory_input.resolve(strict=True)
+    if not directory.is_dir():
         raise ClipImportError("Katalog klipów musi być zwykłym katalogiem.")
     results: List[Dict[str, Any]] = []
     scenes = project.get("scene_plan", {}).get("scenes", [])
     for scene in sorted(scenes, key=lambda item: item.get("sequence_index", 0)):
         if not isinstance(scene, dict):
             continue
-        scene_id = str(scene.get("scene_id"))
+        scene_id = _safe_scene_id(scene.get("scene_id"))
         expected = directory / _expected_filename(root, scene_id)
         if not expected.is_file():
             raise ClipImportError(f"Brakuje oczekiwanego klipu {expected.name}.")

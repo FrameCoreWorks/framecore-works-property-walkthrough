@@ -109,6 +109,19 @@ class RenderingTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
+    @unittest.skipIf(sys.platform.startswith("win"), "Symlinki wymagają uprawnień Windows.")
+    def test_symlink_final_blokuje_render_poza_projektem(self) -> None:
+        project_root = prepare_approved_project(self.base, scene_count=1)
+        final_dir = project_root / "final"
+        outside = self.base / "outside-final"
+        final_dir.rmdir()
+        outside.mkdir()
+        final_dir.symlink_to(outside, target_is_directory=True)
+
+        with self.assertRaisesRegex(ValueError, "dowiązaniem symbolicznym"):
+            render_walkthrough(project_root)
+        self.assertEqual(list(outside.iterdir()), [])
+
     def test_horizontal_and_vertical_outputs_have_required_profile(self) -> None:
         project_root = prepare_approved_project(self.base)
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -55,6 +56,42 @@ class QualityControlTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
+
+    @unittest.skipIf(sys.platform.startswith("win"), "Symlinki wymagają uprawnień Windows.")
+    def test_symlink_approved_blokuje_kopie_poza_projektem(self) -> None:
+        approved = self.project_root / "scenes" / "approved"
+        outside = self.base / "outside-approved"
+        approved.rmdir()
+        outside.mkdir()
+        approved.symlink_to(outside, target_is_directory=True)
+
+        with self.assertRaisesRegex(ValueError, "dowiązaniem symbolicznym"):
+            record_quality_control(
+                self.project_root,
+                self.scene_id,
+                1,
+                "approved",
+                source_comparison_performed=True,
+                comparison_evidence_pl="Porównano klip ze źródłem.",
+            )
+        self.assertEqual(list(outside.iterdir()), [])
+
+    @unittest.skipIf(sys.platform.startswith("win"), "Symlinki wymagają uprawnień Windows.")
+    def test_symlink_reports_qc_blokuje_raport_poza_projektem(self) -> None:
+        reports = self.project_root / "reports"
+        outside = self.base / "outside-reports-qc"
+        shutil.rmtree(reports)
+        outside.mkdir()
+        reports.symlink_to(outside, target_is_directory=True)
+
+        with self.assertRaisesRegex(ValueError, "dowiązaniem symbolicznym"):
+            record_quality_control(
+                self.project_root,
+                self.scene_id,
+                1,
+                "rejected",
+            )
+        self.assertEqual(list(outside.iterdir()), [])
 
     def _candidate(self, index: int) -> Path:
         """Tworzy syntetyczną rewizję o kanonicznej nazwie."""

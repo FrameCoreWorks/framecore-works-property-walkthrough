@@ -11,7 +11,10 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Set
 
 from _common import (
     PolishArgumentParser,
+    atomic_write_json,
+    ensure_managed_directory,
     load_json,
+    resolve_managed_output_path,
     resolve_project_path,
     sha256_file,
     utc_now,
@@ -299,11 +302,9 @@ def analyze_resume(project_root: Path) -> Dict[str, Any]:
         "automatic_submission_allowed": False,
         "provider_calls": 0,
     }
-    reports_dir = root / "reports"
-    reports_dir.mkdir(parents=True, exist_ok=True)
-    from _common import atomic_write_json
-
-    atomic_write_json(reports_dir / "resume-validation.json", report)
+    ensure_managed_directory(root, "reports")
+    report_path = resolve_managed_output_path(root, "reports/resume-validation.json")
+    atomic_write_json(report_path, report)
     return report
 
 

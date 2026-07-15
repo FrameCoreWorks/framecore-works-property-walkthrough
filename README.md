@@ -2,136 +2,153 @@
 
 [![CI](https://github.com/FrameCoreWorks/framecore-works-property-walkthrough/actions/workflows/ci.yml/badge.svg)](https://github.com/FrameCoreWorks/framecore-works-property-walkthrough/actions/workflows/ci.yml)
 
-FrameCore Works Property Walkthrough to polskojęzyczny skill i plugin ChatGPT/Codex do tworzenia projektów filmowej prezentacji nieruchomości. Działa natywnie w ChatGPT/Codex na macOS i Windows po instalacji z repozytorium GitHub.
+Polskojęzyczny plugin ChatGPT/Codex prowadzący produkcję filmowej prezentacji
+nieruchomości od linku lub zdjęć do planu scen, promptów, kontroli jakości i,
+gdy środowisko ma wymagane narzędzia, finalnego MP4.
 
-Repozytorium nie jest aplikacją webową, desktopową ani samodzielnym programem instalowanym przez skrypt systemowy. To komplet pluginu, skilla, instrukcji, deterministycznych helperów i testów, które ChatGPT/Codex wykorzystuje do poprowadzenia pracy nad prezentacją nieruchomości od materiałów źródłowych do finalnego renderu.
+Repozytorium zawiera jeden plugin i jeden skill
+`$create-property-walkthrough`. Nie jest aplikacją SaaS, scraperem ani
+instalatorem systemowym. Nie bundluje dostawcy generowania, nie zmienia PATH i
+nie instaluje FFmpeg, modeli ani kluczy API.
 
-## Co robi skill
+## Najważniejsze możliwości
 
-Skill prowadzi Codexa przez uporządkowany workflow:
+- link do pojedynczego ogłoszenia, wgrane JPEG/PNG, katalog, ZIP lub tryb hybrydowy,
+- bezpieczny projekt roboczy z provenance, SHA-256 i wznawialnym stanem,
+- analiza i selekcja zdjęć oraz arkusze kontaktowe,
+- zwykle 6–10 scen ze stabilnymi `scene_id`, jednym źródłem i jednym ruchem,
+- samodzielne prompty image-to-video po angielsku z polskimi metadanymi,
+- provider-neutral pakiet ręczny,
+- opcjonalna generacja przez connector, MCP albo API wybrane przez użytkownika,
+- jawna zgoda na upload, koszt i każdą płatną ponowną próbę,
+- append-only import klipów, techniczny i wizualny QC,
+- lokalny montaż 16:9 lub 9:16 z zaakceptowanych klipów,
+- kontrolowane wznowienie bez powtarzania ukończonych etapów.
 
-1. Przyjmuje jeden publiczny link do ogłoszenia, wgrane zdjęcia, katalog, archiwum ZIP albo tryb hybrydowy: link plus własne zdjęcia.
-2. Tworzy lokalny projekt roboczy z manifestem, pochodzeniem danych, hashami SHA-256 i bezpieczną strukturą plików.
-3. Analizuje materiały, odrzuca nieprzydatne pliki, wykrywa duplikaty i przygotowuje arkusze kontaktowe.
-4. Buduje plan scen z niezmiennymi `scene_id`, doborem zdjęć, ruchem kamery, formatem i czasem trwania.
-5. Generuje samodzielne prompty image-to-video po angielsku z polskimi metadanymi.
-6. Przygotowuje pakiet do ręcznego generowania klipów poza Codexem.
-7. Opcjonalnie, po osobnej zgodzie użytkownika, obsługuje wskazanego dostawcę MCP albo API.
-8. Importuje gotowe klipy, wykonuje kontrolę techniczną i wspiera selektywną regenerację scen.
-9. Montuje finalny film 16:9 oraz, gdy jest wymagany, wariant 9:16.
+## Trzy tryby działania
 
-## Dla kogo
+| Tryb | Co powstaje | Wymagania wykonawcze |
+|---|---|---|
+| `plan_only` | brief, analiza, storyboard, prompty i pakiet ręczny | rozmowa i materiały użytkownika |
+| `manual_clips` | powyższe, import klipów, QC i lokalny MP4 | Python 3.9+, FFmpeg, ffprobe i lokalne pliki |
+| `full_production` | powyższe oraz zewnętrzna generacja po zgodzie | zgodna integracja connector/MCP/API oraz wymagania trybu manualnego |
 
-Ten skill jest przeznaczony dla osób, które chcą szybko przygotować uporządkowany projekt filmowej prezentacji mieszkania, domu, apartamentu lub lokalu na podstawie istniejących zdjęć i danych ogłoszeniowych.
+Skill wykrywa możliwości hosta i nie pyta o dostawcę na starcie. Integracja
+pojawia się dopiero wtedy, gdy użytkownik wybiera zewnętrzną generację.
+Konkretne usługi są rekomendowane wyłącznie na jawną prośbę, po ustaleniu
+priorytetu i sprawdzeniu bieżącej oficjalnej dokumentacji.
 
-Najlepiej sprawdza się, gdy celem jest:
+## Instalacja
 
-- przygotowanie promptów i paczki produkcyjnej dla generatora image-to-video,
-- zachowanie kontroli nad kosztami i wysyłanymi materiałami,
-- praca w trybie ręcznym albo półautomatycznym,
-- powtarzalny proces dla pojedynczych ofert nieruchomości,
-- finalny montaż z już wygenerowanych klipów.
+Repo zawiera oficjalny manifest pluginu w `.codex-plugin/plugin.json` oraz
+repozytoryjny katalog marketplace w `.agents/plugins/marketplace.json`.
 
-## Czym to nie jest
+### Codex CLI
 
-Projekt celowo nie jest:
+Dodaj marketplace przypięty do tego wydania, a następnie zainstaluj plugin:
 
-- wyszukiwarką ofert,
-- masowym scraperem,
-- aplikacją SaaS,
-- systemem 3D,
-- zamiennikiem Matterport,
-- automatycznym narzędziem do obchodzenia blokad stron,
-- integracją z konkretnym dostawcą generowania aktywną od razu po instalacji.
-
-Skill nie wymyśla niewidocznych pomieszczeń, nie potwierdza rzeczywistej ciągłości przestrzennej i nie daje praw do cudzych zdjęć, opisów, znaków, logo, muzyki ani danych osobowych.
-
-## Instalacja w ChatGPT i Codexie
-
-Repo jest przygotowane w dwóch warstwach:
-
-- jako skill: `skills/create-property-walkthrough`,
-- jako plugin dystrybucyjny: `.codex-plugin/plugin.json`, który wskazuje katalog `./skills/`.
-
-W ChatGPT albo Codexie wklej link do repozytorium i poproś o instalację:
-
-```text
-Zainstaluj plugin albo skill z repozytorium:
-https://github.com/FrameCoreWorks/framecore-works-property-walkthrough
+```bash
+codex plugin marketplace add FrameCoreWorks/framecore-works-property-walkthrough --ref v1.1.0
+codex plugin add framecore-works-property-walkthrough@framecore-works
 ```
 
-Sama instalacja tylko dodaje plugin albo skill do środowiska. ChatGPT nie uruchamia wtedy workflow i dlatego nie zadaje jeszcze pytania o dostawcę. Pytanie o dostawcę MCP/API pojawia się przy pierwszym użyciu skilla.
+### ChatGPT desktop
 
-Po instalacji dostępny jest skill:
+W ChatGPT desktop otwórz repozytorium w powierzchni Work lub Codex, uruchom
+ponownie aplikację, otwórz katalog Plugins, wybierz marketplace
+`FrameCore Works` i zainstaluj `FrameCore Works Property Walkthrough`.
 
-```text
-$create-property-walkthrough
-```
+Samo wklejenie URL repozytorium do dowolnego wariantu ChatGPT nie jest
+gwarantowaną ścieżką instalacji. Dostępność katalogu pluginów zależy od
+powierzchni i polityk workspace.
 
-Nie ma osobnego instalatora systemowego, skryptu dopisującego coś do PATH ani procesu specyficznego tylko dla macOS albo Linuxa. Repo jest przygotowane jako ChatGPT/Codex Native skill oraz plugin-ready paczka.
+Instalacja pluginu również nie gwarantuje lokalnego Pythona ani FFmpeg w każdej
+powierzchni ChatGPT. Skill sprawdza te możliwości przed etapem multimedialnym i
+uczciwie pozostaje w trybie planu lub pakietu ręcznego, gdy ich brakuje.
 
 ## Szybki start
 
-Przykład dla publicznego linku do ogłoszenia:
+Z linku:
 
 ```text
-Użyj $create-property-walkthrough, aby utworzyć projekt filmowej prezentacji nieruchomości z tego linku:
-<wklej link do ogłoszenia>
+Użyj $create-property-walkthrough i przygotuj projekt prezentacji tej nieruchomości:
+<link do ogłoszenia>
 ```
 
-Przy linku skill najpierw zapisuje bezpieczny snapshot strony i wyciąga metadane. Jeżeli snapshot albo zaufana powierzchnia ChatGPT/Codex ujawnia publiczne URL-e zdjęć, także przez `img`, `srcset` albo widoczne metadane obrazu, skill próbuje pobrać je do lokalnego batcha i przyjmuje przez walidowany ingestion. Jeżeli portal, na przykład Otodom, nie udostępnia pełnych zdjęć bez blokady, cookies albo obejścia anti-bot, skill zatrzymuje tryb linku jako partial i instruuje użytkownika, żeby sam otworzył ogłoszenie w przeglądarce, wizualnie zapisał widoczne zdjęcia nieruchomości na swoim urządzeniu i wgrał je bezpośrednio do okna rozmowy ChatGPT/Codex.
-
-Przykład dla wgranych zdjęć:
+Ze zdjęć:
 
 ```text
-Użyj $create-property-walkthrough na wgranych zdjęciach. Przygotuj plan scen, prompty image-to-video i pakiet ręczny do generowania klipów.
+Użyj $create-property-walkthrough na wgranych zdjęciach. Przygotuj brief,
+storyboard, prompty i pakiet ręczny. Nie uruchamiaj płatnej generacji.
 ```
 
-Przykład dla kontynuacji pracy:
+Z gotowych klipów:
 
 ```text
-Użyj $create-property-walkthrough, aby wznowić projekt, zaimportować gotowe klipy, wykonać QC i wyrenderować finalny film.
+Użyj $create-property-walkthrough, wznów projekt, zaimportuj klipy,
+wykonaj QC i przygotuj finalny MP4.
 ```
 
-## Jak działa workflow
+Przed generacją skill pokazuje zwięzłe podsumowanie celu, scenariusza,
+storyboardu, promptów i materiałów. Akceptacja kreatywna jest osobna od zgody
+na upload i koszt.
 
-### 1. Przyjęcie danych
+## Linki do ogłoszeń i zdjęcia
 
-Codex przyjmuje jeden zestaw materiałów na projekt. Link jest traktowany jako źródło danych i metadanych. Zdjęcia, katalogi i ZIP-y są traktowane jako materiały źródłowe użytkownika.
+Lokalne helpery nie wykonują sieci. Link może zostać otwarty wyłącznie przez
+zaufaną powierzchnię przeglądarkową ChatGPT/Codex, która przekazuje ograniczony
+snapshot do parsera.
 
-ZIP trafia do kwarantanny i przechodzi walidację ścieżek, typów wpisów, rozmiarów, liczby plików, kolizji Unicode i prób wyjścia poza katalog projektu.
+Jeżeli strona ujawnia publiczne URL-e zdjęć, host może spróbować pobrać je do
+lokalnego batcha. Jeżeli portal blokuje dostęp, wymaga logowania, cookies,
+CAPTCHA lub obejścia anti-bot, skill nie obchodzi zabezpieczeń. Informuje wtedy
+użytkownika, aby sam otworzył stronę, wizualnie zapisał zdjęcia i wgrał je do
+okna rozmowy.
 
-### 2. Projekt roboczy
+## Zewnętrzne generowanie
 
-Skill tworzy katalog projektu z manifestem `project.json`. Manifest zapisuje wersjonowany stan pracy, pochodzenie danych, hashe, sceny, klipy, status QC i zależności między etapami. Nie zapisuje sekretów ani wartości kluczy API.
+Plugin nie zawiera konkretnego providera ani jego klienta. W ChatGPT może użyć
+connectora lub MCP dostępnego w danym workspace. W Codexie może użyć jawnie
+skonfigurowanego MCP albo API. Klucze pozostają w mechanizmie sekretów hosta i
+nigdy nie trafiają do repozytorium ani projektu.
 
-### 3. Selekcja zdjęć
+Przed płatnym wykonaniem skill:
 
-Codex ocenia materiały, tworzy arkusze kontaktowe, rozpoznaje typy ujęć i odrzuca pliki nieużyteczne dla prezentacji, na przykład rzuty, screenshoty, logotypy, portrety, uszkodzone obrazy albo duplikaty.
+1. wykonuje szybki fact-check aktualnej integracji,
+2. pokazuje pliki, sceny, model, format i czas,
+3. pokazuje przewidywany koszt i zużycie kredytów, gdy są wiarygodnie dostępne,
+4. wymaga osobnej, jednoznacznej zgody na upload i generowanie,
+5. wymaga potwierdzenia kosztu lub świadomego ryzyka nieznanej ceny,
+6. ponownie sprawdza istnienie i SHA-256 plików pochodnych w chwili zgody.
 
-### 4. Plan scen
+Zgoda obowiązuje tylko dla konkretnej partii i bieżącej sesji zadania. Helper
+wiąże ją z losowym, efemerycznym `--session-nonce`; nie używa prawdziwego ID
+wątku ani użytkownika i zapisuje tylko SHA-256 nonce.
 
-Skill układa zwykle 6-10 scen. Każda scena ma stabilne `scene_id`, wybrane zdjęcie źródłowe, ruch kamery, czas trwania, format i prompt. Jeżeli materiałów jest mniej, plan może być krótszy.
+## Montaż, audio i aranżacja
 
-### 5. Pakiet generacyjny
+Wbudowany backend FFmpeg służy do deterministycznego montażu zaakceptowanych
+klipów. Jeżeli środowisko udostępnia skille Remotion lub HyperFrames, workflow
+może użyć ich na polecenie użytkownika do bardziej rozbudowanych napisów,
+warstw i motion designu.
 
-Skill zawsze przygotowuje pakiet ręczny. Taki pakiet można wykorzystać poza Codexem u dowolnie wybranego dostawcy. Samo przygotowanie paczki nie uruchamia generowania i nie wysyła plików.
+Lektor, muzyka i wirtualna aranżacja są opcjonalne. Skill proponuje decyzję, ale
+nie dodaje ich automatycznie. Aranżację zawsze oznacza jako wizualizację. Muzyka
+musi pochodzić od użytkownika albo z biblioteki o warunkach zgodnych z danym
+użyciem. Można też dodać ją ręcznie w CapCut lub Edits.
 
-### 6. Dostawca opcjonalny
+## Preflight
 
-Skill nie skanuje, nie sugeruje i nie wybiera dostawców. Jeżeli użytkownik chce wykonania przez MCP albo API, musi wskazać konkretnego dostawcę i metodę. Codex sprawdza tylko ten wskazany wariant, bez testowego generowania i bez wysyłania zdjęć.
+Read-only sprawdzenie środowiska:
 
-Przed każdą partią zewnętrzną Codex pokazuje zakres scen, model, format, czas, pliki do wysłania oraz koszt albo status jego weryfikacji. Zgoda dotyczy tylko tej konkretnej partii.
+```text
+python3 skills/create-property-walkthrough/scripts/preflight_environment.py --mode full_production --json
+```
 
-W ChatGPT zewnętrzny dostawca może być podpięty przez osobną wtyczkę, connector albo MCP dostępne w danym środowisku. Ten plugin nie bundluje żadnego dostawcy i nie aktywuje fal.ai ani innej usługi samodzielnie. Provider jest wybierany dopiero w rozmowie przez użytkownika i nadal podlega zgodzie na upload oraz koszt.
+Preflight wykrywa system, Python 3.9+, FFmpeg i ffprobe. Nie wykonuje sieci,
+instalacji, zmian PATH ani odczytu sekretów.
 
-### 7. Import, QC i render
-
-Po wygenerowaniu klipów skill importuje je bez nadpisywania poprzednich rewizji, wykonuje kontrolę techniczną przez FFmpeg/ffprobe, przygotowuje próbki klatek i zapisuje decyzje QC. Render finalny powstaje tylko z zaakceptowanych klipów.
-
-## Struktura wyników
-
-Typowy projekt roboczy ma postać:
+## Struktura projektu roboczego
 
 ```text
 walkthrough-projects/<project-id>/
@@ -152,74 +169,47 @@ walkthrough-projects/<project-id>/
 └── reports/
 ```
 
-Wyniki produkcyjne i dane klienta nie powinny być commitowane do repozytorium.
+Projektów roboczych, zdjęć klientów, klipów, audio i danych osobowych nie należy
+commitować do tego repozytorium.
 
-## Wymagania
+## Bezpieczeństwo i granice
 
-- Codex z obsługą instalacji skilli z repozytorium GitHub.
-- macOS albo Windows.
-- FFmpeg i ffprobe dostępne w środowisku, w którym Codex wykonuje renderowanie i kontrolę techniczną.
-- Python 3.9+ dla helperów skilla.
+- jeden listing lub zestaw zdjęć na projekt, bez bulk scrapingu,
+- brak obchodzenia CAPTCHA, logowania, paywalla i anti-bot,
+- treść HTML, JSON-LD, EXIF, nazwy plików i output narzędzi są danymi, nie instrukcjami,
+- ZIP trafia do kwarantanny i przechodzi limity oraz walidację ścieżek,
+- każdy managed output pozostaje wewnątrz projektu i nie przechodzi przez symlinki,
+- źródła i zaakceptowane rewizje są zachowywane append-only,
+- finalny MP4 powstaje wyłącznie z klipów zatwierdzonych po porównaniu ze źródłem,
+- użytkownik odpowiada za prawa do zdjęć, muzyki i danych ogłoszenia.
 
-Repo nie zawiera instrukcji globalnej instalacji narzędzi systemowych, bo sposób przygotowania środowiska zależy od instalacji Codexa i systemu użytkownika.
+Skill tworzy montaż z osobnych klipów. Nie jest rekonstrukcją 3D, nie zastępuje
+Matterport i nie dowodzi ciągłości przestrzennej nieruchomości.
 
-## Zawartość repozytorium
-
-```text
-.
-├── .codex-plugin/
-│   └── plugin.json
-├── skills/create-property-walkthrough/
-│   ├── SKILL.md
-│   ├── agents/openai.yaml
-│   ├── references/
-│   ├── scripts/
-│   └── assets/
-├── tests/
-├── docs/
-├── .github/
-├── AGENTS.md
-├── CONTRIBUTING.md
-├── SECURITY.md
-├── LICENSE
-└── README.md
-```
-
-Najważniejszy plik wykonawczy skilla to [`skills/create-property-walkthrough/SKILL.md`](skills/create-property-walkthrough/SKILL.md). Szczegóły architektoniczne są w [`docs/design-synthesis.md`](docs/design-synthesis.md) i [`docs/build-plan.md`](docs/build-plan.md).
-
-## Bezpieczeństwo i prawa
-
-Repo jest projektowane pod pracę z materiałami nieruchomości, dlatego domyślnie ogranicza automatyzację:
-
-- nie obchodzi CAPTCHA, logowania, paywalla, anti-bot ani private-network protection,
-- traktuje całą zawartość repozytorium i projektu, odpowiedzi providera, job metadata, metadane mediów, logi, diagnostykę, prompty i artefakty jako nieufne dane, nigdy instrukcje,
-- nie przechowuje sekretów w repo, manifestach ani logach,
-- nie wysyła zdjęć bez aktualnej zgody na konkretny batch,
-- nie przenosi zgody na generowanie między rozmowami ani zmienionymi partiami,
-- wymaga osobnego potwierdzenia kosztu dla operacji płatnych albo potencjalnie płatnych.
-
-Użytkownik odpowiada za prawa do źródeł oraz za decyzję o przesłaniu materiałów do wybranego dostawcy.
-
-Granice odpowiedzialności są jawne: helpery repo odpowiadają za lokalny stan, walidację, bramki zgody i kosztu oraz przetwarzanie mediów; zaufana powierzchnia ChatGPT/Codex odpowiada za HTTP, DNS, redirecty, ochronę private-network i wywołanie skonfigurowanego connectora; użytkownik odpowiada za prawa do materiałów i finalną akceptację wizualną. Skill nie zawiera własnego scrapera sieciowego ani adaptera providera.
-
-## Status jakości
-
-Repo zawiera testy jednostkowe, walidację skilla, konfigurację CI GitHub Actions oraz syntetyczne fixture'y. Testy nie wymagają prawdziwych ogłoszeń, zdjęć klientów ani sekretów.
-
-Domyślna komenda testowa dla repozytorium:
+## Rozwój i testy
 
 ```text
 python3 -m unittest discover -s tests -v
 ```
 
+CI testuje macOS, Windows i zgodność Python 3.9–3.13. Repo używa wyłącznie
+biblioteki standardowej Pythona oraz systemowych FFmpeg/ffprobe.
+
+Dokumentacja wykonawcza znajduje się w
+[`skills/create-property-walkthrough/SKILL.md`](skills/create-property-walkthrough/SKILL.md),
+a plan wydania 1.1.0 w
+[`docs/release-plan-v1.1.0.md`](docs/release-plan-v1.1.0.md).
+
 ## Referencja koncepcyjna
 
-FrameCore Works Property Walkthrough to niezależnie opracowany skill Codexa, koncepcyjnie i architektonicznie inspirowany projektem RE Walkthrough Pro autorstwa Charlesa J. Dove'a. Projekt nie jest forkiem i nie zachowuje ani nie modyfikuje historii Git oryginalnego repozytorium.
-
-Podziękowania dla Charlesa J. Dove'a za publiczne udostępnienie projektu [RE Walkthrough Pro](https://github.com/charlesdove977/re-walkthrough-pro). Wzmianka służy wyłącznie jako podziękowanie i wskazanie źródła inspiracji koncepcyjnej. Repozytorium nie kopiuje licencji, kodu ani materiałów projektu referencyjnego.
-
-Nie istnieje partnerstwo, poparcie ani afiliacja z autorem projektu referencyjnego.
+FrameCore Works Property Walkthrough jest niezależną implementacją,
+koncepcyjnie i architektonicznie inspirowaną projektem
+[RE Walkthrough Pro](https://github.com/charlesdove977/re-walkthrough-pro)
+autorstwa Charlesa J. Dove'a. Repozytorium nie jest forkiem i nie kopiuje kodu,
+historii Git, licencji ani materiałów projektu referencyjnego. Nie istnieje
+partnerstwo, poparcie ani afiliacja z jego autorem.
 
 ## Licencja
 
-Niezależna implementacja FrameCore Works jest udostępniona na licencji MIT. Zobacz [`LICENSE`](LICENSE).
+Niezależna implementacja FrameCore Works jest udostępniona na licencji MIT.
+Zobacz [`LICENSE`](LICENSE).

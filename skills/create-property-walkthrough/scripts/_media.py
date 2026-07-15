@@ -52,6 +52,27 @@ class MediaError(RuntimeError):
     """Błąd bezpiecznej walidacji albo lokalnej operacji multimedialnej."""
 
 
+def media_tool_paths() -> Dict[str, Optional[str]]:
+    """Wykryj lokalne narzędzia bez instalacji, sieci ani zmiany PATH."""
+
+    return {name: shutil.which(name) for name in ("ffmpeg", "ffprobe")}
+
+
+def require_media_tools() -> Dict[str, str]:
+    """Zatrzymaj etap multimedialny z jednoznaczną listą braków."""
+
+    detected = media_tool_paths()
+    missing = [name for name, path in detected.items() if path is None]
+    if missing:
+        raise MediaError(
+            "Brakuje wymaganych programów systemowych: {}. "
+            "Uruchom preflight i udostępnij je w PATH przed etapem multimedialnym.".format(
+                ", ".join(missing)
+            )
+        )
+    return {name: str(path) for name, path in detected.items() if path is not None}
+
+
 def _regular_file(path: Path) -> os.stat_result:
     """Zwróć metadane zwykłego pliku, nie podążając za dowiązaniami."""
 

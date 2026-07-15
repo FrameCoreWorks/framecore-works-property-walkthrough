@@ -16,15 +16,13 @@ class TestLicenses(unittest.TestCase):
         self.assertFalse((ROOT / "THIRD_PARTY_NOTICES.md").exists())
 
     def test_deklaracja_relacji(self):
-        deklaracja = (
-            "FrameCore Works Property Walkthrough to niezależnie opracowany skill Codexa, "
-            "koncepcyjnie i architektonicznie inspirowany projektem RE Walkthrough Pro "
-            "autorstwa Charlesa J. Dove'a. Projekt nie jest forkiem i nie zachowuje ani "
-            "nie modyfikuje historii Git oryginalnego repozytorium."
-        )
         tekst = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn(deklaracja, tekst)
-        self.assertIn("Podziękowania dla Charlesa J. Dove'a", tekst)
+        self.assertIn("niezależną implementacją", tekst)
+        self.assertIn("RE Walkthrough Pro", tekst)
+        self.assertIn("Charlesa J. Dove'a", tekst)
+        self.assertIn("nie jest forkiem", tekst)
+        self.assertIn("nie kopiuje kodu", tekst)
+        self.assertIn("nie kopiuje kodu,\nhistorii Git, licencji ani materiałów", tekst)
 
 
 if __name__ == "__main__":

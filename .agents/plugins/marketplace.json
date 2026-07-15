@@ -1,0 +1,21 @@
+{
+  "name": "framecore-works",
+  "interface": {
+    "displayName": "FrameCore Works"
+  },
+  "plugins": [
+    {
+      "name": "framecore-works-property-walkthrough",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/FrameCoreWorks/framecore-works-property-walkthrough.git",
+        "ref": "v1.1.0"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

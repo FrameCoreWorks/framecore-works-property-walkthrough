@@ -16,7 +16,9 @@ class TestSkillStructure(unittest.TestCase):
             SKILL / "SKILL.md",
             SKILL / "agents" / "openai.yaml",
             ROOT / ".codex-plugin" / "plugin.json",
+            ROOT / ".agents" / "plugins" / "marketplace.json",
             ROOT / "README.md",
+            ROOT / "CHANGELOG.md",
             ROOT / "LICENSE",
             ROOT / "CONTRIBUTING.md",
             ROOT / "SECURITY.md",
@@ -24,6 +26,12 @@ class TestSkillStructure(unittest.TestCase):
             ROOT / ".github" / "pull_request_template.md",
             ROOT / "docs" / "design-synthesis.md",
             ROOT / "docs" / "build-plan.md",
+            SKILL / "scripts" / "preflight_environment.py",
+            SKILL / "references" / "runtime-capabilities.md",
+            SKILL / "references" / "production-brief.md",
+            SKILL / "references" / "audio-and-music.md",
+            SKILL / "references" / "editing-backends.md",
+            SKILL / "references" / "final-delivery.md",
         ]
         for sciezka in wymagane:
             self.assertTrue(sciezka.is_file(), str(sciezka))
@@ -55,9 +63,11 @@ class TestSkillStructure(unittest.TestCase):
         self.assertIn("allow_implicit_invocation: true", tekst)
         self.assertIn("$create-property-walkthrough", tekst)
 
-    def test_readme_ma_wylacznie_instalacje_chatgpt_codex_native(self):
+    def test_readme_opisuje_wersjonowana_instalacje_marketplace(self):
         tekst = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("## Instalacja w ChatGPT i Codexie", tekst)
+        self.assertIn("## Instalacja", tekst)
+        self.assertIn("codex plugin marketplace add", tekst)
+        self.assertIn("codex plugin add", tekst)
         self.assertIn(
             "https://github.com/FrameCoreWorks/framecore-works-property-walkthrough",
             tekst,
@@ -68,23 +78,28 @@ class TestSkillStructure(unittest.TestCase):
     def test_plugin_manifest_wskazuje_skill_i_nie_bundluje_providera(self):
         manifest = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["name"], "framecore-works-property-walkthrough")
-        self.assertEqual(manifest["version"], "1.0.1")
+        self.assertEqual(manifest["version"], "1.1.0")
         self.assertEqual(manifest["skills"], "./skills/")
         self.assertIn("interface", manifest)
         self.assertIn("defaultPrompt", manifest["interface"])
         serialized = json.dumps(manifest, ensure_ascii=False)
-        self.assertIn("Najpierw zapytaj mnie o dostawcę MCP/API", serialized)
+        self.assertNotIn("Najpierw zapytaj mnie o dostawcę MCP/API", serialized)
+        self.assertIn("pakiet ręczny", serialized)
         self.assertNotIn("mcpServers", manifest)
         self.assertNotIn("apps", manifest)
 
-    def test_pierwsze_uzycie_pyta_o_dostawce(self):
+    def test_start_skilla_jest_provider_neutralny(self):
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         onboarding = (SKILL / "references" / "provider-onboarding.md").read_text(encoding="utf-8")
         metadata = (SKILL / "agents" / "openai.yaml").read_text(encoding="utf-8")
-        self.assertIn("Przy pierwszym użyciu po instalacji", skill)
-        self.assertIn("zadaj dokładnie pytanie o dostawcę MCP/API", skill)
-        self.assertIn("Jakiego dostawcę MCP lub API chcesz skonfigurować", onboarding)
-        self.assertIn("Najpierw zapytaj mnie o dostawcę MCP/API", metadata)
+        self.assertIn("`plan_only`, `manual_clips` albo `full_production`", skill)
+        self.assertIn("Nie pytaj jeszcze o dostawcę", skill)
+        self.assertIn("Nie pytaj o dostawcę podczas zwykłego startu", onboarding)
+        self.assertIn("Rekomendacje tylko na prośbę", onboarding)
+        self.assertNotIn("Najpierw zapytaj mnie o dostawcę MCP/API", metadata)
+        self.assertIn("Jeżeli `plan_only` działa bez lokalnych helperów", skill)
+        self.assertIn("`--session-nonce`", skill)
+        self.assertNotIn("--session-id", skill)
 
     def test_link_mode_probuje_publiczne_zdjecia_bez_obejsc(self):
         ingestion = (SKILL / "references" / "input-ingestion.md").read_text(encoding="utf-8")
@@ -107,6 +122,9 @@ class TestSkillStructure(unittest.TestCase):
         self.assertIn("windows-latest", tekst)
         self.assertIn("macos-latest", tekst)
         self.assertIn("permissions:\n  contents: read", tekst)
+        self.assertIn('tags: ["v*"]', tekst)
+        self.assertIn("distribution:", tekst)
+        self.assertIn("preflight_environment.py --mode full_production", tekst)
         self.assertNotIn("actions/checkout@v", tekst)
         self.assertNotIn("actions/setup-python@v", tekst)
         self.assertRegex(tekst, r"actions/checkout@[0-9a-f]{40} # v6")

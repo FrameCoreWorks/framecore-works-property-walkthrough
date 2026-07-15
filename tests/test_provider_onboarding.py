@@ -73,7 +73,7 @@ def validated_profile_data(name: str = "Dostawca Testowy") -> dict:
             },
             "official_sources": [
                 {
-                    "url": "https://docs.invalid/video",
+                    "url": "https://docs.example.com/video",
                     "purpose": "Syntetyczny dowód kontraktu testowego.",
                     "checked_at": utc_now(),
                 }

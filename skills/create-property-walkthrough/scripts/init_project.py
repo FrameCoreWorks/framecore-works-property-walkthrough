@@ -22,6 +22,7 @@ try:
         sha256_file,
         utc_now,
         validate_project_id,
+        validate_public_http_url,
     )
     from ._schema import (
         DocumentValidationError,
@@ -39,6 +40,7 @@ except ImportError:
         sha256_file,
         utc_now,
         validate_project_id,
+        validate_public_http_url,
     )
     from _schema import (  # type: ignore
         DocumentValidationError,
@@ -117,13 +119,11 @@ def _source_domain(source_url: Optional[str]) -> Optional[str]:
 
     if source_url is None:
         return None
-    if not isinstance(source_url, str) or not source_url.strip():
-        raise ProjectInitializationError("URL źródłowy musi być niepustym tekstem.")
+    try:
+        validate_public_http_url(source_url)
+    except ProjectStateError as exc:
+        raise ProjectInitializationError(f"Niepoprawny URL źródłowy: {exc}") from exc
     parsed = urlsplit(source_url)
-    if parsed.scheme not in ("http", "https") or not parsed.hostname:
-        raise ProjectInitializationError("URL źródłowy musi używać HTTP albo HTTPS i zawierać host.")
-    if parsed.username or parsed.password:
-        raise ProjectInitializationError("URL źródłowy nie może zawierać danych logowania.")
     return parsed.hostname.lower()
 
 

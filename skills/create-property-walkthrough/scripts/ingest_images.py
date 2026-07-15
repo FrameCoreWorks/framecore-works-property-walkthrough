@@ -24,46 +24,14 @@ import unicodedata
 import uuid
 import zipfile
 
-try:
-    from _common import (
-        PolishArgumentParser,
-        ProjectStatePostCommitError,
-        atomic_write_json,
-        load_json,
-    )
-except ImportError:  # Bezpieczny fallback dla izolowanego uruchomienia helpera.
-    PolishArgumentParser = argparse.ArgumentParser
-
-    class ProjectStatePostCommitError(ValueError):
-        """Fallback kontraktu zapisu opublikowanego przed błędem trwałości."""
-
-        committed = True
-        published = True
-
-    def load_json(path: Union[os.PathLike[str], str]) -> Any:
-        """Wczytaj JSON UTF-8, gdy wspólny moduł projektu nie jest dostępny."""
-
-        with Path(path).open("r", encoding="utf-8") as handle:
-            return json.load(handle)
-
-    def atomic_write_json(path: Union[os.PathLike[str], str], data: Any) -> None:
-        """Zapisz JSON atomowo, gdy wspólny moduł projektu nie jest dostępny."""
-
-        destination = Path(path)
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        descriptor, temporary = tempfile.mkstemp(dir=str(destination.parent))
-        try:
-            with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
-                json.dump(data, handle, ensure_ascii=False, indent=2, sort_keys=True)
-                handle.write("\n")
-                handle.flush()
-                os.fsync(handle.fileno())
-            os.replace(temporary, destination)
-        finally:
-            try:
-                os.unlink(temporary)
-            except FileNotFoundError:
-                pass
+from _common import (
+    PolishArgumentParser,
+    ProjectStatePostCommitError,
+    atomic_write_json,
+    ensure_managed_directory,
+    load_json,
+    resolve_managed_output_path,
+)
 
 from _media import (
     DEFAULT_MAX_IMAGE_BYTES,
@@ -72,6 +40,7 @@ from _media import (
     dhash_image,
     hamming_distance,
     probe_image,
+    require_media_tools,
     sha256_file,
     validate_image_decodable,
 )
@@ -446,8 +415,7 @@ def _prepare_input(
     if stat.S_ISLNK(metadata.st_mode):
         raise IngestionError("Źródło ingestion nie może być dowiązaniem symbolicznym.")
 
-    quarantine_root = destination / "quarantine"
-    _ensure_directory(quarantine_root)
+    quarantine_root = ensure_managed_directory(destination, "quarantine")
     rejected: List[Dict[str, str]] = []
 
     if stat.S_ISDIR(metadata.st_mode):
@@ -456,9 +424,12 @@ def _prepare_input(
         if not files:
             raise IngestionError("Katalog nie zawiera obsługiwanych obrazów JPEG/PNG.")
         fingerprint = _directory_fingerprint(files, limits)
-        run_quarantine = quarantine_root / fingerprint[:24]
-        candidates_dir = run_quarantine / "candidates"
-        _ensure_directory(candidates_dir)
+        run_quarantine = ensure_managed_directory(
+            destination, Path("quarantine") / fingerprint[:24]
+        )
+        candidates_dir = ensure_managed_directory(
+            destination, Path("quarantine") / fingerprint[:24] / "candidates"
+        )
         candidates: List[_Candidate] = []
         for index, (path, relative) in enumerate(files):
             suffix = path.suffix.casefold()
@@ -480,12 +451,14 @@ def _prepare_input(
     if suffix in ARCHIVE_SUFFIXES:
         source_kind = "zip"
         fingerprint = sha256_file(source, max_bytes=limits.max_archive_bytes)
-        run_quarantine = quarantine_root / fingerprint[:24]
-        _ensure_directory(run_quarantine)
+        run_quarantine = ensure_managed_directory(
+            destination, Path("quarantine") / fingerprint[:24]
+        )
         archived = run_quarantine / "input.zip"
         _copy_regular(source, archived, limits.max_archive_bytes)
-        candidates_dir = run_quarantine / "candidates"
-        _ensure_directory(candidates_dir)
+        candidates_dir = ensure_managed_directory(
+            destination, Path("quarantine") / fingerprint[:24] / "candidates"
+        )
         candidates, rejected = _extract_zip_candidates(archived, candidates_dir, limits)
         if not candidates:
             raise IngestionError("ZIP nie zawiera obsługiwanych obrazów JPEG/PNG.")
@@ -495,9 +468,12 @@ def _prepare_input(
         raise IngestionError("Plik wejściowy musi być obrazem JPEG/PNG albo archiwum ZIP.")
     source_kind = "file"
     fingerprint = sha256_file(source, max_bytes=limits.max_file_bytes)
-    run_quarantine = quarantine_root / fingerprint[:24]
-    candidates_dir = run_quarantine / "candidates"
-    _ensure_directory(candidates_dir)
+    run_quarantine = ensure_managed_directory(
+        destination, Path("quarantine") / fingerprint[:24]
+    )
+    candidates_dir = ensure_managed_directory(
+        destination, Path("quarantine") / fingerprint[:24] / "candidates"
+    )
     safe_name = _safe_relative_name(source.name)
     quarantined = candidates_dir / "0000{}".format(suffix)
     _copy_regular(source, quarantined, limits.max_file_bytes)
@@ -522,7 +498,7 @@ def _empty_manifest(destination: Path) -> Dict[str, Any]:
 
 
 def _load_manifest(destination: Path) -> Dict[str, Any]:
-    manifest_path = destination / "ingestion.json"
+    manifest_path = resolve_managed_output_path(destination, "ingestion.json")
     if not manifest_path.exists():
         return _empty_manifest(destination)
     try:
@@ -552,9 +528,14 @@ def _validate_existing_assets(manifest: Dict[str, Any], destination: Path) -> Di
             or not isinstance(path_value, str)
         ):
             raise IngestionError("Istniejący asset ma nieprawidłowy identyfikator albo ścieżkę.")
-        original = Path(path_value).resolve()
-        if not _is_within(original, destination) or not original.exists():
-            raise IngestionError("Ścieżka istniejącego original wychodzi poza katalog ingestion.")
+        try:
+            original = resolve_managed_output_path(
+                destination, path_value, must_exist=True
+            )
+        except ValueError as exc:
+            raise IngestionError(
+                "Ścieżka istniejącego original wychodzi poza katalog ingestion."
+            ) from exc
         if sha256_file(original) != asset_hash:
             raise IngestionError("Hash istniejącego original nie zgadza się z manifestem.")
         if asset_hash in by_hash:
@@ -652,6 +633,10 @@ def ingest_images(
     """
 
     active_limits = limits or IngestionLimits()
+    try:
+        require_media_tools()
+    except MediaError as exc:
+        raise IngestionError(f"Preflight multimediów nieudany: {exc}") from exc
     source = Path(os.path.abspath(os.fspath(source_path)))
     destination_input = Path(destination_path)
     if destination_input.exists() and destination_input.is_symlink():
@@ -754,12 +739,18 @@ def ingest_images(
                 "original": staged_original,
                 "thumbnail": staged_thumbnail,
             }
+            original_path = resolve_managed_output_path(
+                destination, original_relative
+            )
+            thumbnail_path = resolve_managed_output_path(
+                destination, thumbnail_relative
+            )
             asset = {
                 "asset_id": digest,
                 "sha256": digest,
-                "original_path": str((destination / original_relative).resolve()),
+                "original_path": str(original_path),
                 "original_relative_path": original_relative.as_posix(),
-                "thumbnail_path": str((destination / thumbnail_relative).resolve()),
+                "thumbnail_path": str(thumbnail_path),
                 "thumbnail_relative_path": thumbnail_relative.as_posix(),
                 "format": details["format"],
                 "mime_type": details["mime_type"],
@@ -808,10 +799,16 @@ def ingest_images(
             for cell in sheet_result["cells"]:
                 cell["source_path"] = final_paths[cell["asset_id"]]
             sheet_result["contact_sheet_path"] = str(
-                (destination / "contact-sheets" / staged_sheet.name).resolve()
+                resolve_managed_output_path(
+                    destination,
+                    Path("contact-sheets") / staged_sheet.name,
+                )
             )
             sheet_result["index_path"] = str(
-                (destination / "contact-sheets" / staged_index.name).resolve()
+                resolve_managed_output_path(
+                    destination,
+                    Path("contact-sheets") / staged_index.name,
+                )
             )
             atomic_write_json(staged_index, sheet_result)
             sheet_entry = {
@@ -850,16 +847,29 @@ def ingest_images(
 
         for digest, paths in sorted(staged_new.items()):
             asset = by_hash[digest]
-            _publish_file(paths["original"], Path(asset["original_path"]), created_files)
-            _publish_file(paths["thumbnail"], Path(asset["thumbnail_path"]), created_files)
+            original_destination = resolve_managed_output_path(
+                destination, asset["original_path"], create_parent=True
+            )
+            thumbnail_destination = resolve_managed_output_path(
+                destination, asset["thumbnail_path"], create_parent=True
+            )
+            _publish_file(paths["original"], original_destination, created_files)
+            _publish_file(paths["thumbnail"], thumbnail_destination, created_files)
         if sheet_entry is not None:
             staged_sheet = staging / "contact-sheets" / Path(sheet_entry["path"]).name
             staged_index = staging / "contact-sheets" / Path(sheet_entry["index_path"]).name
-            _publish_file(staged_sheet, Path(sheet_entry["path"]), created_files)
-            _publish_file(staged_index, Path(sheet_entry["index_path"]), created_files)
+            sheet_destination = resolve_managed_output_path(
+                destination, sheet_entry["path"], create_parent=True
+            )
+            index_destination = resolve_managed_output_path(
+                destination, sheet_entry["index_path"], create_parent=True
+            )
+            _publish_file(staged_sheet, sheet_destination, created_files)
+            _publish_file(staged_index, index_destination, created_files)
 
         try:
-            atomic_write_json(destination / "ingestion.json", manifest)
+            manifest_path = resolve_managed_output_path(destination, "ingestion.json")
+            atomic_write_json(manifest_path, manifest)
             manifest_committed = True
         except ProjectStatePostCommitError as exc:
             manifest_committed = True

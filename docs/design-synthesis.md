@@ -8,11 +8,12 @@
 - Rynek i język użytkownika: Polska, język polski
 - Status: zaakceptowany do implementacji po Hipson Checkpoint 3
 - Data syntezy: 2026-07-11
+- Aktualizacja kontraktu dystrybucyjnego: 2026-07-15, wydanie 1.1.0
 - Tryb realizacji: niezależna implementacja clean-room, skill-first
 
 ## Cel
 
-Zbudować instalowalny skill Codexa, który tworzy kompletny projekt filmowego walkthrough nieruchomości z jednego publicznego linku, wgranych zdjęć, katalogu, ZIP-u albo trybu hybrydowego. Skill prowadzi od bezpiecznego intake przez selekcję zdjęć i plan scen do promptów image-to-video, opcjonalnego wykonania przez wskazanego przez użytkownika dostawcę, kontroli jakości, selektywnej regeneracji i lokalnego montażu FFmpeg.
+Zbudować instalowalny plugin ChatGPT/Codex z jednym skillem, który tworzy projekt filmowego walkthrough nieruchomości z jednego publicznego linku, wgranych zdjęć, katalogu, ZIP-u albo trybu hybrydowego. Skill prowadzi od bezpiecznego intake przez selekcję zdjęć i plan scen do promptów image-to-video. Zależnie od możliwości hosta i wyboru użytkownika może zakończyć pracę pakietem planistycznym, przyjąć ręcznie wygenerowane klipy albo przeprowadzić zewnętrzną generację, kontrolę jakości i montaż finalnego MP4.
 
 Rezultat jest cinematic walkthrough z osobnych klipów. Nie jest rekonstrukcją 3D i nie gwarantuje ciągłości przestrzennej pomiędzy pomieszczeniami.
 
@@ -27,7 +28,7 @@ Rezultat jest cinematic walkthrough z osobnych klipów. Nie jest rekonstrukcją 
 - deterministyczny plan 6–10 scen, gdy materiały na to pozwalają,
 - samodzielny angielski prompt I2V dla każdej sceny oraz polskie metadane,
 - manualny pakiet generacyjny bez zewnętrznego wykonania,
-- neutralny onboarding jednego dostawcy MCP albo API,
+- provider-neutral onboarding, a konfiguracja connectora, MCP albo API dopiero dla zewnętrznej generacji,
 - batch-scoped zgoda na upload i generowanie oraz osobne potwierdzenie kosztu,
 - import, techniczna kontrola klipów, raport ręcznego QC,
 - render 16:9 i opcjonalny 9:16,
@@ -41,14 +42,14 @@ Rezultat jest cinematic walkthrough z osobnych klipów. Nie jest rekonstrukcją 
 - aplikacja webowa, desktopowa, API lub baza danych,
 - automatyczny wybór, skanowanie, porównywanie lub rekomendowanie dostawców,
 - testowe generowanie zewnętrzne podczas konfiguracji,
-- automatyczne muzyka, voice-over, logo, adres i dane kontaktowe,
+- automatyczne dodawanie muzyki, voice-overu, logo, adresu lub danych kontaktowych bez decyzji użytkownika,
 - obietnica Matterport, rekonstrukcji 3D lub zweryfikowanej topologii lokalu.
 
 ## Relacja z projektem referencyjnym
 
-FrameCore Works Property Walkthrough to niezależnie opracowany skill Codexa, koncepcyjnie i architektonicznie inspirowany projektem RE Walkthrough Pro autorstwa Charlesa J. Dove'a. Projekt nie jest forkiem i nie zachowuje ani nie modyfikuje historii Git oryginalnego repozytorium.
+FrameCore Works Property Walkthrough to niezależnie opracowany plugin ChatGPT/Codex z jednym skillem, koncepcyjnie i architektonicznie inspirowany projektem RE Walkthrough Pro autorstwa Charlesa J. Dove'a. Projekt nie jest forkiem i nie zachowuje ani nie modyfikuje historii Git oryginalnego repozytorium.
 
-RE Walkthrough Pro autorstwa Charlesa J. Dove'a służył jako referencja koncepcyjna i architektoniczna dla workflow tworzenia walkthrough nieruchomości z osobnych klipów pomieszczeń. FrameCore Works Property Walkthrough został zaimplementowany niezależnie od początku dla Codexa i nie zawiera historii Git oryginalnego repozytorium.
+RE Walkthrough Pro autorstwa Charlesa J. Dove'a służył jako referencja koncepcyjna i architektoniczna dla workflow tworzenia walkthrough nieruchomości z osobnych klipów pomieszczeń. FrameCore Works Property Walkthrough został zaimplementowany niezależnie od początku i nie zawiera historii Git oryginalnego repozytorium.
 
 Repozytorium upstream nie jest używane jako working tree. Do nowego repo nie zostaną przeniesione jego obiekty Git, historia, kod, dokumentacja ani plik licencji. README zachowuje opisową atrybucję źródła wiedzy i inspiracji koncepcyjnej. Każde ewentualne późniejsze zapożyczenie wymaga osobnej analizy licencyjnej przed włączeniem.
 
@@ -56,7 +57,7 @@ Repozytorium upstream nie jest używane jako working tree. Do nowego repo nie zo
 
 Repozytorium zawiera jeden główny skill i małe deterministyczne narzędzia. `SKILL.md` przechowuje rdzeń workflow i routing do references. Szczegóły domenowe są ładowane progresywnie. Skrypty nie podejmują decyzji kreatywnych i nie uruchamiają dostawców bez jawnych danych oraz bramek.
 
-Implementacja zachowuje jeden kontrakt Codex Native na macOS i Windows. Operacje plikowe, blokady projektu, ścieżki tymczasowe i uruchamianie helperów nie mogą zakładać mechanizmów dostępnych tylko w jednym systemie.
+Implementacja zachowuje jeden kontrakt pluginu dla ChatGPT i Codexa. Lokalne helpery pozostają przenośne między macOS, Windows i Linux, ale są uruchamiane wyłącznie wtedy, gdy host udostępnia Python 3.9+, FFmpeg, ffprobe i lokalne pliki. Instalacja pluginu sama nie instaluje tych narzędzi.
 
 Planowana struktura:
 
@@ -83,7 +84,7 @@ framecore-works-property-walkthrough/
     └── synthetic-project/
 ```
 
-Nie powstaje `requirements.txt`, ponieważ implementacja używa wyłącznie biblioteki standardowej Pythona. Szczegóły wykonawcze helperów pozostają częścią działania skilla zarządzanego przez Codexa, a nie osobną ścieżką instalacji użytkownika.
+Nie powstaje `requirements.txt`, ponieważ implementacja używa wyłącznie biblioteki standardowej Pythona. Szczegóły wykonawcze helperów pozostają częścią działania skilla w kompatybilnym hoście, a nie osobną ścieżką instalacji użytkownika.
 
 ## Model stanu projektu
 
@@ -160,11 +161,11 @@ Każda scena ma:
 
 Prompty zachowują geometrię i zawartość kadru, blokują nowe otwory, pokoje, obiekty, disappearance, duplication, morphing, bending, geometry drift i impossible reveals. Nie zawierają osobnego generycznego negative promptu.
 
-## Onboarding dostawcy
+## Onboarding środowiska i dostawcy
 
-Przed dokładnym pytaniem nie wolno skanować, wyświetlać ani sugerować dostawców. Przy pierwszym użyciu po instalacji Codex zadaje jedno wymagane pytanie bez przykładów i czeka.
+Przy pierwszym użyciu skill ustala cel, materiały i tryb `plan_only`, `manual_clips` albo `full_production`. Nie wymaga dostawcy do planowania ani pracy z ręcznie dostarczonymi klipami. Jeżeli host pozwala uruchomić lokalny preflight, skill sprawdza system, Python, FFmpeg i ffprobe bez sieci, instalacji, zmian `PATH` ani odczytu sekretów.
 
-Po odpowiedzi sprawdzana jest wyłącznie dokładna nazwa i metoda `MCP` albo `API`. Walidacja używa oficjalnej dokumentacji oraz nie wykonuje generacji ani testowego uploadu.
+Dopiero po wyborze zewnętrznej generacji skill pyta o posiadane połączenie przez connector, MCP albo API. Nie skanuje i nie sugeruje konkretnych usług bez jawnej prośby. Gdy użytkownik prosi o rekomendację, najpierw ustala jego priorytet, a potem sprawdza bieżącą oficjalną dokumentację maksymalnie trzech pasujących opcji. Walidacja nie wykonuje generacji ani testowego uploadu.
 
 Profil użytkownika bez sekretów jest przechowywany lokalnie poza repo:
 
@@ -186,7 +187,7 @@ Do uploadu służą tylko osobne derivative files przygotowane przez `prepare_up
 
 ## Wykonanie automatyczne i manualne
 
-Rdzeń repo nie zawiera adaptera konkretnego providera. Po wyborze Codex korzysta z aktualnie zatwierdzonej oficjalnej powierzchni MCP/API i profilu capabilities. Brak bezpiecznej powierzchni pozostawia projekt w trybie manualnym.
+Rdzeń repo nie zawiera adaptera konkretnego providera. Po wyborze ChatGPT lub Codex korzysta z aktualnie zatwierdzonej powierzchni connector/MCP/API i profilu capabilities. Brak bezpiecznej powierzchni pozostawia projekt w trybie planu albo manualnym.
 
 Manual mode zawsze może wyprodukować curated images, plan scen, prompty, oczekiwane nazwy i manifest generacyjny. Import klipów wznawia ten sam projekt od kontroli technicznej.
 
@@ -213,7 +214,7 @@ Resume zaczyna od `project.json`, sprawdza schemat, pliki i hashe, zachowuje pop
 
 ## Instalacja
 
-Skill jest instalowany natywnie przez Codexa po przekazaniu adresu repozytorium GitHub. Repozytorium nie dostarcza ani nie opisuje alternatywnego instalatora.
+Repozytorium dostarcza manifest pluginu oraz katalog marketplace. W Codex CLI użytkownik dodaje marketplace przypięty do taga wydania i instaluje plugin z tego katalogu. W ChatGPT desktop instalacja odbywa się z katalogu Plugins w obsługiwanej powierzchni Work/Codex. Samo wklejenie URL do dowolnego wariantu ChatGPT nie jest gwarantowaną ścieżką instalacji. Repo nie dostarcza instalatora systemowego i nie modyfikuje hosta.
 
 ## GitHub
 
@@ -225,7 +226,7 @@ Checkpoint jest pushowany dopiero po testach, secret scan, asset scan i czystym 
 
 Testy używają `unittest`, tymczasowych katalogów i syntetycznych JPEG/PNG oraz lokalnych klipów FFmpeg. Provider-free E2E uruchamia helpery z blokadą socketów i providerem-pułapką. Licznik zewnętrznych wywołań musi pozostać równy zero.
 
-Zakres obejmuje strukturę skilla, aktywację, schematy, ZIP, pliki uszkodzone, Unicode, HTML fixtures, provenance, deduplikację, contact sheets, sceny, prompty, provider profile, dokładne pytania, sekrety, zgody, cost gate, manual mode, import, FFmpeg, resume, selektywną regenerację, licencje, clean-room, GitHub identity i instalację Codex Native.
+Zakres obejmuje strukturę pluginu i skilla, marketplace, aktywację, preflight, schematy, ZIP, pliki uszkodzone, Unicode, HTML fixtures, provenance, deduplikację, contact sheets, sceny, prompty, provider-neutral onboarding, profile bez sekretów, zgody, cost gate, trzy tryby pracy, import, FFmpeg, resume, selektywną regenerację, licencje, clean-room i dystrybucję z GitHuba.
 
 ## Ryzyka i ograniczenia
 
@@ -233,12 +234,12 @@ Zakres obejmuje strukturę skilla, aktywację, schematy, ZIP, pliki uszkodzone, 
 - Bez zewnętrznej biblioteki obrazowej walidacja i miniatury wspierają świadomie ograniczony zestaw JPEG/PNG.
 - Near-duplicate i wizualne QC są wsparciem decyzyjnym, nie niezawodnym automatem CV.
 - Implicit activation może nie być obserwowalne w lokalnym harnessie. Wtedy status jest `niezweryfikowane`, nigdy cichy PASS.
-- Brak wyboru lub bezpiecznej powierzchni providera nie blokuje manual mode, ale blokuje ukończenie automatycznego onboardingu.
+- Brak wyboru lub bezpiecznej powierzchni providera nie blokuje planowania ani manual mode, ale blokuje zewnętrzną generację.
 - `blocked` w onboardingu nie jest ukończeniem projektu i nie uruchamia substytucji dostawcy.
 
 ## Rekomendacje przyjęte
 
-- jeden skill zamiast aplikacji lub plugin wrappera,
+- jeden lekki plugin z jednym skillem zamiast aplikacji,
 - czysta historia Git i osobny clean-room ledger,
 - trusted-web retrieval oraz helpery bez socketów,
 - centralna kwarantanna wejść i fail-closed ZIP,
@@ -249,15 +250,15 @@ Zakres obejmuje strukturę skilla, aktywację, schematy, ZIP, pliki uszkodzone, 
 - ograniczony jawny podzbiór JSON Schema,
 - provider-neutral profile poza repo i manual mode,
 - hermetyczny E2E z zerowym ruchem sieciowym,
-- natywna instalacja skilla przez Codexa z repozytorium GitHub.
+- dystrybucja pluginu przez przypięty tag i repozytoryjny marketplace.
 
 ## Rekomendacje odrzucone lub odłożone
 
 - aplikacja webowa, desktopowa, serwer API i baza danych: poza zakresem,
-- plugin wrapper: brak potrzeby dla jednego skilla,
+- aplikacja lub rozbudowany runtime pluginu: brak potrzeby dla jednego skilla,
 - zależności Pillow, requests i jsonschema: nie są konieczne dla pierwszej kompletnej wersji,
 - bezpośredni scraper HTTP w helperze: zastąpiony zaufaną powierzchnią web/browser,
-- committed adapter jednego providera: narusza neutralność i pytanie named-only,
+- committed adapter jednego providera: narusza provider-neutral kontrakt,
 - automatyczny wybór providera lub provider fallback: zakazany,
 - automatyczna generacja testowa podczas onboardingu: zakazana,
 - ukryty cap jako obejście nieznanego kosztu: odrzucony, wymagane jawne potwierdzenie,

@@ -16,14 +16,17 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence
 from _common import (
     PolishArgumentParser,
     atomic_write_json,
+    ensure_managed_directory,
     load_json,
     locked_project_mutation,
+    resolve_managed_output_path,
     resolve_project_path,
     sha256_file,
     utc_now,
     validate_project_root,
 )
 from _media import MediaError, run_ffmpeg
+from _schema import DocumentValidationError, validate_scene_id
 from configure_provider import (
     COST_CONFIRMATION_QUESTION,
     GENERATION_CONSENT_QUESTION,
@@ -44,6 +47,31 @@ COST_STATUSES = ("known", "unknown", "unavailable")
 
 class GenerationSafetyError(ValueError):
     """Oznacza niespełnioną bramkę uploadu, zgody albo kosztu."""
+
+
+def session_scope_sha256(session_id: str) -> str:
+    """Zwiąż zgodę z bieżącym zadaniem bez utrwalania efemerycznego nonce."""
+
+    if (
+        not isinstance(session_id, str)
+        or len(session_id) < 16
+        or len(session_id) > 256
+        or session_id != session_id.strip()
+        or any(ord(character) < 32 or ord(character) == 127 for character in session_id)
+    ):
+        raise GenerationSafetyError(
+            "Nonce bieżącej sesji musi mieć 16-256 znaków i nie zawierać znaków sterujących."
+        )
+    return hashlib.sha256(session_id.encode("utf-8")).hexdigest()
+
+
+def _safe_scene_id(value: Any) -> str:
+    """Waliduje scene_id zanim identyfikator stanie się częścią ścieżki."""
+
+    try:
+        return validate_scene_id(value)
+    except DocumentValidationError as exc:
+        raise GenerationSafetyError(str(exc)) from exc
 
 
 def canonical_hash(value: Any) -> str:
@@ -116,9 +144,7 @@ def _prepare_single_derivative(
 ) -> Dict[str, Any]:
     """Transkoduje jedno źródło przez FFmpeg, usuwając metadane."""
 
-    scene_id = scene.get("scene_id")
-    if not isinstance(scene_id, str) or not scene_id:
-        raise GenerationSafetyError("Scena nie ma scene_id.")
+    scene_id = _safe_scene_id(scene.get("scene_id"))
     source_relative = scene.get("source_path")
     if not isinstance(source_relative, str):
         raise GenerationSafetyError(f"Scena {scene_id} nie ma source_path.")
@@ -127,8 +153,11 @@ def _prepare_single_derivative(
     if scene.get("source_sha256") != source_hash:
         raise GenerationSafetyError(f"Hash źródła sceny {scene_id} jest nieaktualny.")
 
-    destination_dir.mkdir(parents=True, exist_ok=True)
-    destination = destination_dir / f"{scene_id}-upload.jpg"
+    destination = resolve_managed_output_path(
+        project_root,
+        destination_dir / f"{scene_id}-upload.jpg",
+        create_parent=True,
+    )
     if destination.resolve(strict=False) == source.resolve(strict=False):
         raise GenerationSafetyError("Derivative nie może zastępować oryginału.")
     temporary = destination.with_name(
@@ -188,6 +217,7 @@ def build_batch_fingerprint_payload(
     entries: Sequence[Mapping[str, Any]],
     cost: Mapping[str, Any],
     output_path: str,
+    session_scope: str,
     retry_number: int = 0,
 ) -> Dict[str, Any]:
     """Buduje immutable zakres zgody związany ze wszystkimi istotnymi danymi."""
@@ -211,6 +241,7 @@ def build_batch_fingerprint_payload(
         "job_count": len(entries),
         "cost": dict(cost),
         "output_path": output_path,
+        "session_scope_sha256": session_scope,
         "retry_number": retry_number,
     }
 
@@ -226,6 +257,7 @@ def prepare_upload_derivatives(
     currency: Optional[str] = None,
     budget: Optional[float] = None,
     output_path: str = "scenes/imported",
+    session_id: str,
     rights_overrides: Optional[Mapping[str, Mapping[str, Any]]] = None,
     retry_number: int = 0,
 ) -> Dict[str, Any]:
@@ -240,6 +272,7 @@ def prepare_upload_derivatives(
     if not isinstance(profile, dict):
         raise GenerationSafetyError("Profil dostawcy musi być obiektem JSON.")
     validate_profile_data(profile, require_verified=True)
+    session_scope = session_scope_sha256(session_id)
     if not isinstance(model_id, str) or not model_id.strip():
         raise GenerationSafetyError("Pakiet wymaga jawnego model_id.")
     if cost_status not in COST_STATUSES:
@@ -265,7 +298,19 @@ def prepare_upload_derivatives(
     if not isinstance(scenes, list) or not scenes:
         raise GenerationSafetyError("Projekt nie ma aktywnego planu scen.")
     classifications = _classifications_by_id(project)
-    derivative_dir = root / "generation-package" / "upload-derivatives"
+    derivative_dir = ensure_managed_directory(
+        root, Path("generation-package") / "upload-derivatives"
+    )
+    snapshot_path = resolve_managed_output_path(
+        root,
+        Path("provider") / "provider-profile.snapshot.json",
+        create_parent=True,
+    )
+    manifest_path = resolve_managed_output_path(
+        root,
+        Path("generation-package") / "provider-batch-manifest.json",
+        create_parent=True,
+    )
     entries: List[Dict[str, Any]] = []
     for scene in sorted(scenes, key=lambda item: item.get("sequence_index", 0)):
         if not isinstance(scene, dict):
@@ -276,7 +321,6 @@ def prepare_upload_derivatives(
         entry.update(_rights_and_pii(classifications.get(image_id, {}), override))
         entries.append(entry)
 
-    snapshot_path = root / "provider" / "provider-profile.snapshot.json"
     atomic_write_json(snapshot_path, profile)
     profile_hash = sha256_file(snapshot_path)
     cost = {
@@ -292,6 +336,7 @@ def prepare_upload_derivatives(
         entries=entries,
         cost=cost,
         output_path=output_path,
+        session_scope=session_scope,
         retry_number=retry_number,
     )
     fingerprint = canonical_hash(fingerprint_payload)
@@ -302,6 +347,7 @@ def prepare_upload_derivatives(
         "fingerprint_payload": fingerprint_payload,
         "provider_profile_snapshot_path": "provider/provider-profile.snapshot.json",
         "provider_profile_sha256": profile_hash,
+        "session_scope_sha256": session_scope,
         "model_id": model_id,
         "entries": entries,
         "cost": cost,
@@ -312,7 +358,6 @@ def prepare_upload_derivatives(
         "submission_allowed": False,
         "provider_calls": 0,
     }
-    manifest_path = root / "generation-package" / "provider-batch-manifest.json"
     atomic_write_json(manifest_path, manifest)
 
     project["provider_profile"] = {
@@ -379,6 +424,75 @@ def _fingerprint_binding_reasons(manifest: Mapping[str, Any]) -> List[str]:
         reasons.append("Model nie odpowiada fingerprintowi zgody.")
     if payload.get("cost") != manifest.get("cost"):
         reasons.append("Koszt nie odpowiada fingerprintowi zgody.")
+    if payload.get("session_scope_sha256") != manifest.get("session_scope_sha256"):
+        reasons.append("Zakres sesji nie odpowiada fingerprintowi zgody.")
+    return reasons
+
+
+def _live_derivative_reasons(
+    project_root: Path,
+    manifest: Mapping[str, Any],
+) -> List[str]:
+    """Ponownie sprawdza pliki derivative dokładnie w chwili autoryzacji."""
+
+    try:
+        root = validate_project_root(project_root)
+    except ValueError as exc:
+        return [f"Nie można zweryfikować katalogu projektu: {exc}"]
+    profile_relative = manifest.get("provider_profile_snapshot_path")
+    if not isinstance(profile_relative, str):
+        return ["Manifest nie zawiera ścieżki snapshotu profilu dostawcy."]
+    try:
+        profile_path = resolve_managed_output_path(
+            root, profile_relative, must_exist=True
+        )
+        if not profile_path.is_file():
+            raise GenerationSafetyError("Snapshot profilu musi być zwykłym plikiem.")
+        if sha256_file(profile_path) != manifest.get("provider_profile_sha256"):
+            raise GenerationSafetyError("Hash snapshotu profilu dostawcy jest nieaktualny.")
+        profile = load_json(profile_path)
+        if not isinstance(profile, dict):
+            raise GenerationSafetyError("Snapshot profilu dostawcy musi być obiektem JSON.")
+        validate_profile_data(profile, require_verified=True)
+    except (OSError, ProviderValidationError, ValueError) as exc:
+        return [f"Nie można potwierdzić aktualnego profilu dostawcy: {exc}"]
+
+    entries = manifest.get("entries")
+    if not isinstance(entries, list):
+        return ["Manifest nie zawiera listy derivative'ów do weryfikacji na żywo."]
+
+    reasons: List[str] = []
+    for entry in entries:
+        if not isinstance(entry, Mapping):
+            continue
+        scene_label = entry.get("scene_id")
+        try:
+            scene_id = _safe_scene_id(scene_label)
+            derivative_relative = entry.get("upload_derivative_path")
+            original_relative = entry.get("original_path")
+            if not isinstance(derivative_relative, str) or not isinstance(
+                original_relative, str
+            ):
+                raise GenerationSafetyError("Brakuje ścieżki derivative'u albo oryginału.")
+            derivative = resolve_managed_output_path(
+                root, derivative_relative, must_exist=True
+            )
+            original = resolve_managed_output_path(
+                root, original_relative, must_exist=True
+            )
+            if not derivative.is_file() or not original.is_file():
+                raise GenerationSafetyError("Derivative i oryginał muszą być zwykłymi plikami.")
+            if derivative.resolve(strict=True) == original.resolve(strict=True):
+                raise GenerationSafetyError("Derivative wskazuje ten sam plik co oryginał.")
+            if sha256_file(derivative) != entry.get("upload_derivative_sha256"):
+                raise GenerationSafetyError("Hash derivative'u zmienił się po przygotowaniu zgody.")
+            if sha256_file(original) != entry.get("original_sha256"):
+                raise GenerationSafetyError("Hash oryginału zmienił się po przygotowaniu zgody.")
+        except (OSError, ValueError) as exc:
+            reasons.append(f"Scena {scene_label}: {exc}")
+            continue
+        if scene_id != scene_label:
+            reasons.append(f"Scena {scene_label}: identyfikator sceny jest niekanoniczny.")
     return reasons
 
 
@@ -386,6 +500,8 @@ def evaluate_generation_gate(
     manifest: Mapping[str, Any],
     consent: Mapping[str, Any],
     *,
+    project_root: Optional[Path] = None,
+    current_session_id: Optional[str] = None,
     paid_retry: bool = False,
 ) -> Dict[str, Any]:
     """Ocenia zgodę fail-closed bez uruchamiania submission."""
@@ -400,7 +516,23 @@ def evaluate_generation_gate(
         reasons.append("Zgoda nie jest związana z dokładnym pytaniem o upload i generowanie.")
     if consent.get("upload_and_generation_approved") is not True:
         reasons.append("Brak jednoznacznej zgody na upload i generowanie.")
+    if current_session_id is None:
+        reasons.append("Brak identyfikatora bieżącej sesji zadania.")
+    else:
+        try:
+            current_session_scope = session_scope_sha256(current_session_id)
+        except GenerationSafetyError as exc:
+            reasons.append(str(exc))
+        else:
+            if manifest.get("session_scope_sha256") != current_session_scope:
+                reasons.append("Manifest został przygotowany w innej sesji zadania.")
+            if consent.get("session_scope_sha256") != current_session_scope:
+                reasons.append("Zgoda nie dotyczy bieżącej sesji zadania.")
     reasons.extend(_fingerprint_binding_reasons(manifest))
+    if project_root is None:
+        reasons.append("Brak katalogu projektu do końcowej weryfikacji derivative'ów.")
+    else:
+        reasons.extend(_live_derivative_reasons(project_root, manifest))
 
     entries = manifest.get("entries")
     if not isinstance(entries, list) or not entries:
@@ -468,11 +600,19 @@ def assert_generation_authorized(
     manifest: Mapping[str, Any],
     consent: Mapping[str, Any],
     *,
+    project_root: Path,
+    current_session_id: str,
     paid_retry: bool = False,
 ) -> Dict[str, Any]:
     """Zwraca autoryzację albo zatrzymuje wykonanie z polskim komunikatem."""
 
-    result = evaluate_generation_gate(manifest, consent, paid_retry=paid_retry)
+    result = evaluate_generation_gate(
+        manifest,
+        consent,
+        project_root=project_root,
+        current_session_id=current_session_id,
+        paid_retry=paid_retry,
+    )
     if not result["allowed"]:
         raise GenerationSafetyError("; ".join(result["reasons"]))
     return result
@@ -515,6 +655,12 @@ def build_parser() -> argparse.ArgumentParser:
     prepare.add_argument("--currency")
     prepare.add_argument("--budget", type=float)
     prepare.add_argument("--output-path", default="scenes/imported")
+    prepare.add_argument(
+        "--session-nonce",
+        dest="session_id",
+        required=True,
+        help="Losowy efemeryczny nonce bieżącego zadania; w manifeście zapisywany jest tylko jego hash.",
+    )
     prepare.add_argument("--rights-json", type=Path)
     prepare.add_argument("--retry-number", type=int, default=0)
 
@@ -524,6 +670,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     authorize.add_argument("--manifest", required=True, type=Path)
     authorize.add_argument("--consent", required=True, type=Path)
+    authorize.add_argument(
+        "--project",
+        required=True,
+        type=Path,
+        help="Katalog projektu do ponownej walidacji plików derivative.",
+    )
+    authorize.add_argument(
+        "--session-nonce",
+        dest="session_id",
+        required=True,
+        help="Ten sam losowy efemeryczny nonce bieżącego zadania.",
+    )
     authorize.add_argument("--paid-retry", action="store_true")
     return parser
 
@@ -544,6 +702,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 currency=args.currency,
                 budget=args.budget,
                 output_path=args.output_path,
+                session_id=args.session_id,
                 rights_overrides=overrides,
                 retry_number=args.retry_number,
             )
@@ -553,7 +712,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         consent = load_json(args.consent)
         if not isinstance(manifest, dict) or not isinstance(consent, dict):
             raise GenerationSafetyError("Manifest i zgoda muszą być obiektami JSON.")
-        result = evaluate_generation_gate(manifest, consent, paid_retry=args.paid_retry)
+        result = evaluate_generation_gate(
+            manifest,
+            consent,
+            project_root=args.project,
+            current_session_id=args.session_id,
+            paid_retry=args.paid_retry,
+        )
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         return 0 if result["allowed"] else 3
     except (

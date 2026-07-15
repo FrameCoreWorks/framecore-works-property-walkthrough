@@ -2,7 +2,7 @@
 
 ## Zakres projektu
 
-Repozytorium rozwija jeden wieloplatformowy skill Codex Native: `create-property-walkthrough`. Zmiany nie powinny przekształcać go w osobną aplikację ani usługę.
+Repozytorium rozwija jeden wieloplatformowy plugin ChatGPT/Codex z jednym skillem `create-property-walkthrough`. Zmiany nie powinny przekształcać go w osobną aplikację ani usługę.
 
 ## Zasady zmian
 
@@ -21,7 +21,13 @@ Przed wysłaniem pull requesta uruchom:
 python3 -m unittest discover -s tests -v
 ```
 
-Następnie zweryfikuj katalog `skills/create-property-walkthrough` przez `quick_validate.py` dostarczane z Codexem oraz sprawdź `git diff --check`.
+Następnie:
+
+- uruchom `quick_validate.py` dla `skills/create-property-walkthrough`,
+- uruchom oficjalny `validate_plugin.py` dla rootu repo,
+- sprawdź JSON w `.codex-plugin/plugin.json` i `.agents/plugins/marketplace.json`,
+- uruchom `python3 -m unittest tests.test_distribution -v`,
+- sprawdź `git diff --check`.
 
 ## Pull request
 

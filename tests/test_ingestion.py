@@ -60,6 +60,46 @@ def _zip_with_backslash(path: Path, payload: bytes) -> None:
 class IngestionTests(unittest.TestCase):
     """Każde wejście przechodzi przez kwarantannę i limity fail-closed."""
 
+    def test_brak_ffmpeg_daje_jawny_blad_preflightu(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="ingest-preflight-") as temporary:
+            root = Path(temporary)
+            source = root / "source.png"
+            destination = root / "destination"
+            _make_image(source, color="green")
+            with mock.patch.object(
+                ingestion,
+                "require_media_tools",
+                side_effect=ingestion.MediaError(
+                    "Brakuje wymaganych programów systemowych: ffmpeg, ffprobe."
+                ),
+            ):
+                with self.assertRaisesRegex(ingestion.IngestionError, "Preflight.*ffmpeg"):
+                    ingestion.ingest_images(source, destination)
+            self.assertFalse(destination.exists())
+
+    @unittest.skipIf(sys.platform.startswith("win"), "Symlinki wymagają uprawnień Windows.")
+    def test_symlinkowane_katalogi_outputu_nie_publikuja_poza_destination(self) -> None:
+        for child in ("quarantine", "originals", "thumbnails", "contact-sheets"):
+            with self.subTest(child=child), tempfile.TemporaryDirectory(
+                prefix="ingest-symlink-"
+            ) as temporary:
+                root = Path(temporary)
+                source = root / "source.png"
+                destination = root / "destination"
+                outside = root / "outside"
+                destination.mkdir()
+                outside.mkdir()
+                _make_image(source, color="blue")
+                (destination / child).symlink_to(outside, target_is_directory=True)
+
+                with self.assertRaises((ingestion.IngestionError, ProjectStateError)):
+                    ingestion.ingest_images(
+                        source,
+                        destination,
+                        create_contact_sheet=child == "contact-sheets",
+                    )
+                self.assertEqual(list(outside.iterdir()), [])
+
     def test_zip_sprawdza_surowa_nazwe_sprzed_normalizacji_windows(self) -> None:
         with tempfile.TemporaryDirectory(prefix="ingest-zip-orig-") as temporary:
             archive_path = Path(temporary) / "backslash.zip"

@@ -2,7 +2,7 @@
 
 ## Cel i język
 
-- Rozwijaj jeden skill Codexa: `create-property-walkthrough`.
+- Rozwijaj jeden plugin ChatGPT/Codex z jednym skillem `create-property-walkthrough`.
 - Pisz dokumentację, komunikaty CLI, błędy, docstringi i komentarze po polsku.
 - Zachowuj angielskie prompty image-to-video i wymagane techniczne identyfikatory.
 - Używaj UTF-8 i testuj polskie znaki.
@@ -11,14 +11,14 @@
 
 - Utrzymuj architekturę skill-first, bez aplikacji webowej, desktopowej, API i bazy danych.
 - Używaj Python 3.9+ oraz biblioteki standardowej. Nie dodawaj zależności bez jawnej decyzji.
-- Zachowuj natywne działanie w Codexie na macOS i Windows; nie wprowadzaj mechanizmów zależnych wyłącznie od jednego systemu.
-- Traktuj FFmpeg i ffprobe jako wymagania systemowe.
+- Zachowuj przenośność lokalnych helperów na macOS, Windows i Linux; nie wprowadzaj mechanizmów zależnych wyłącznie od jednego systemu.
+- Traktuj FFmpeg i ffprobe jako wymagania lokalnych etapów multimedialnych, nie samej instalacji pluginu ani trybu `plan_only`.
 - Utrzymuj małe deterministyczne skrypty. Decyzje wizualne pozostawiaj Codexowi lub użytkownikowi.
 - Helpery repozytorium nie mogą wykonywać bezpośrednich połączeń sieciowych.
 
 ## Bezpieczeństwo
 
-- Nie skanuj, nie sugeruj i nie wybieraj dostawców. Sprawdzaj wyłącznie nazwę podaną przez użytkownika przy pierwszym użyciu zainstalowanego skilla.
+- Nie wymagaj dostawcy przy pierwszym użyciu. Najpierw ustal cel i tryb pracy. Integrację sprawdzaj dopiero dla zewnętrznej generacji; konkretne usługi rekomenduj wyłącznie na jawną prośbę użytkownika i po ustaleniu jego priorytetu.
 - Nie uruchamiaj zewnętrznej generacji ani uploadu bez aktualnej zgody na dokładny batch.
 - Wymagaj osobnego potwierdzenia kosztu dla operacji płatnych lub potencjalnie płatnych.
 - Nie zapisuj sekretów, kluczy, cookies, podpisanych URL-i ani pełnych odpowiedzi providera.

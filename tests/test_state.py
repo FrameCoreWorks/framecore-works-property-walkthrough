@@ -23,7 +23,9 @@ from _common import (  # noqa: E402
     ProjectStateError,
     ProjectStatePostCommitError,
     atomic_write_json,
+    ensure_managed_directory,
     load_json,
+    resolve_managed_output_path,
     resolve_project_path,
     safe_slug,
     sha256_file,
@@ -127,6 +129,41 @@ class CommonStateTests(unittest.TestCase):
             with self.assertRaisesRegex(ProjectStateError, "poza katalog"):
                 resolve_project_path(root, "../sekret.txt")
 
+    def test_managed_output_bezpiecznie_tworzy_zagniezdzone_katalogi(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "managed-root"
+            root.mkdir()
+            nested = ensure_managed_directory(root, "reports/qc")
+            target = resolve_managed_output_path(root, "reports/qc/wynik.json")
+            self.assertEqual(nested, root.resolve() / "reports" / "qc")
+            self.assertEqual(target, nested / "wynik.json")
+
+    def test_managed_output_odrzuca_traversal_i_sciezke_poza_rootem(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "managed-root"
+            root.mkdir()
+            outside = Path(directory) / "poza.json"
+            for candidate in ("../poza.json", outside):
+                with self.assertRaisesRegex(ProjectStateError, "poza katalog"):
+                    resolve_managed_output_path(root, candidate)
+
+    @unittest.skipIf(os.name == "nt", "Tworzenie symlinków wymaga uprawnień Windows.")
+    def test_managed_output_odrzuca_symlink_posredni_i_finalny(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "managed-root"
+            outside = Path(directory) / "outside"
+            root.mkdir()
+            outside.mkdir()
+            (root / "reports").symlink_to(outside, target_is_directory=True)
+            with self.assertRaisesRegex(ProjectStateError, "dowiązaniem symbolicznym"):
+                resolve_managed_output_path(root, "reports/wynik.json")
+
+            (root / "reports").unlink()
+            (root / "reports").mkdir()
+            (root / "reports" / "wynik.json").symlink_to(outside / "wynik.json")
+            with self.assertRaisesRegex(ProjectStateError, "dowiązaniem symbolicznym"):
+                resolve_managed_output_path(root, "reports/wynik.json")
+
     def test_natywna_blokada_windows_ma_backend_standard_library(self) -> None:
         class FakeMsvcrt:
             LK_LOCK = 1
@@ -178,6 +215,26 @@ class ProjectLifecycleTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
+
+    def test_inicjalizacja_stosuje_publiczna_polityke_url(self) -> None:
+        for url in (
+            "http://127.0.0.1/oferta",
+            "http://2130706433/oferta",
+            "http://0x7f000001/oferta",
+            "http://0177.0.0.1/oferta",
+            "http://sub.localhost/oferta",
+            "http://intranet/oferta",
+            "http://panel.internal/oferta",
+            "http://router.local/oferta",
+        ):
+            with self.subTest(url=url), self.assertRaises(ProjectInitializationError):
+                create_project(
+                    self.projects_root,
+                    "Niebezpieczny URL",
+                    project_id="niebezpieczny-url",
+                    source_mode="listing-url",
+                    source_url=url,
+                )
 
     def test_inicjalizacja_tworzyl_pelne_drzewo_i_snapshot(self) -> None:
         self.assertEqual(self.project.name, "lazienka-zolta")

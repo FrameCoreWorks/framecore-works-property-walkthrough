@@ -16,7 +16,11 @@ if str(SCRIPTS) not in sys.path:
 
 from _common import atomic_write_json, load_json, sha256_file  # noqa: E402
 import import_clips as clip_module  # noqa: E402
-from import_clips import ClipImportError, import_clip  # noqa: E402
+from import_clips import (  # noqa: E402
+    ClipImportError,
+    import_clip,
+    import_expected_clips,
+)
 from tests.test_scene_planning import (  # noqa: E402
     make_synthetic_clip,
     prepare_synthetic_project,
@@ -111,6 +115,26 @@ class ClipImportTests(unittest.TestCase):
                 / "technical.json"
             ).is_file()
         )
+
+    def test_niepoprawny_scene_id_jest_odrzucany_przed_zapisem(self) -> None:
+        source = self._candidate(31)
+        with self.assertRaisesRegex(ClipImportError, "scene_id"):
+            import_clip(self.project_root, "../ucieczka", source)
+        self.assertFalse((self.project_root.parent / "ucieczka").exists())
+
+    @unittest.skipIf(sys.platform.startswith("win"), "Symlinki wymagają uprawnień Windows.")
+    def test_symlink_klipu_i_katalogu_import_all_sa_odrzucane(self) -> None:
+        target = self._candidate(32)
+        link = self.base / "linki" / f"{self.scene_id}.mp4"
+        link.parent.mkdir(parents=True)
+        link.symlink_to(target)
+        with self.assertRaisesRegex(ClipImportError, "dowiązaniem symbolicznym"):
+            import_clip(self.project_root, self.scene_id, link)
+
+        directory_link = self.base / "katalog-link"
+        directory_link.symlink_to(target.parent, target_is_directory=True)
+        with self.assertRaisesRegex(ClipImportError, "dowiązaniem symbolicznym"):
+            import_expected_clips(self.project_root, directory_link)
 
     def test_tombstone_blokuje_import_i_nie_publikuje_rewizji(self) -> None:
         project = load_json(self.project_root / "project.json")

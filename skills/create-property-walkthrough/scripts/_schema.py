@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 import math
+import ntpath
 import re
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Callable, Dict, FrozenSet, Iterable, List, Mapping, Optional, Sequence, Tuple
 from urllib.parse import urlsplit
 
@@ -19,6 +20,7 @@ try:
         resolve_project_path,
         sha256_file,
         validate_project_id,
+        validate_public_http_url,
     )
 except ImportError:
     from _common import (  # type: ignore
@@ -29,6 +31,7 @@ except ImportError:
         resolve_project_path,
         sha256_file,
         validate_project_id,
+        validate_public_http_url,
     )
 
 
@@ -330,9 +333,19 @@ def _parse_utc_timestamp(value: Any, path: str, allow_null: bool = False) -> Opt
 def _validate_relative_path(value: Any, path: str) -> None:
     if not isinstance(value, str) or not value or not SAFE_RELATIVE_PART.fullmatch(value):
         raise _validation_error(path, "ścieżka względna musi być niepustym tekstem bez NUL.")
-    candidate = Path(value)
+    if "\\" in value or ntpath.splitdrive(value)[0]:
+        raise _validation_error(path, "ścieżka musi używać przenośnych separatorów '/'.")
+    candidate = PurePosixPath(value)
     if candidate.is_absolute() or any(part in ("", ".", "..") for part in candidate.parts):
         raise _validation_error(path, "ścieżka musi być bezpieczna i względna.")
+
+
+def validate_scene_id(value: Any, path: str = "$.scene_id") -> str:
+    """Sprawdź stabilny identyfikator sceny przed użyciem w ścieżce."""
+
+    if not isinstance(value, str) or SCENE_ID_PATTERN.fullmatch(value) is None:
+        raise _validation_error(path, "scene_id nie jest bezpiecznym stabilnym identyfikatorem.")
+    return value
 
 
 def _validate_sha256(value: Any, path: str) -> None:
@@ -348,9 +361,7 @@ def _validate_scene_state(scene_plan: Mapping[str, Any], path: str) -> None:
 
     for index, scene in enumerate(scenes):
         scene_path = f"{path}.scenes[{index}]"
-        scene_id = scene.get("scene_id")
-        if not isinstance(scene_id, str) or SCENE_ID_PATTERN.fullmatch(scene_id) is None:
-            raise _validation_error(scene_path, "scene_id nie jest bezpiecznym stabilnym identyfikatorem.")
+        scene_id = validate_scene_id(scene.get("scene_id"), f"{scene_path}.scene_id")
         active_ids.append(scene_id)
         indexes.append(scene.get("sequence_index"))
 
@@ -364,9 +375,9 @@ def _validate_scene_state(scene_plan: Mapping[str, Any], path: str) -> None:
     tombstone_ids: List[str] = []
     for index, tombstone in enumerate(tombstones):
         tombstone_path = f"{path}.tombstones[{index}]"
-        scene_id = tombstone.get("scene_id")
-        if not isinstance(scene_id, str) or SCENE_ID_PATTERN.fullmatch(scene_id) is None:
-            raise _validation_error(tombstone_path, "scene_id tombstone'a jest niepoprawne.")
+        scene_id = validate_scene_id(
+            tombstone.get("scene_id"), f"{tombstone_path}.scene_id"
+        )
         tombstone_ids.append(scene_id)
         _parse_utc_timestamp(tombstone.get("removed_at"), f"{tombstone_path}.removed_at")
 
@@ -434,9 +445,11 @@ def validate_project_semantics(
     url = source.get("url")
     domain = source.get("domain")
     if url is not None:
+        try:
+            validate_public_http_url(url)
+        except ProjectStateError as exc:
+            raise _validation_error("$.source.url", str(exc)) from exc
         parsed = urlsplit(url)
-        if parsed.scheme not in ("http", "https") or not parsed.hostname or parsed.username or parsed.password:
-            raise _validation_error("$.source.url", "URL źródłowy musi być publicznym adresem HTTP albo HTTPS bez danych logowania.")
         if domain != parsed.hostname.lower():
             raise _validation_error("$.source.domain", "domena musi odpowiadać hostowi URL.")
     elif domain is not None:
@@ -594,9 +607,10 @@ def validate_provider_profile_semantics(document: Mapping[str, Any]) -> None:
         raise _validation_error("$.verification_errors", "status blocked wymaga konkretnego błędu weryfikacji.")
 
     for index, source in enumerate(document.get("official_sources", [])):
-        parsed = urlsplit(source.get("url", ""))
-        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
-            raise _validation_error(f"$.official_sources[{index}].url", "oficjalne źródło musi być adresem HTTPS bez danych logowania.")
+        try:
+            validate_public_http_url(source.get("url", ""), https_only=True)
+        except ProjectStateError as exc:
+            raise _validation_error(f"$.official_sources[{index}].url", str(exc)) from exc
         _parse_utc_timestamp(source.get("checked_at"), f"$.official_sources[{index}].checked_at")
     _scan_for_secret_fields(
         document,
@@ -651,5 +665,6 @@ __all__ = [
     "validate_project_semantics",
     "validate_provider_profile_semantics",
     "validate_scene_plan_semantics",
+    "validate_scene_id",
     "validate_schema",
 ]

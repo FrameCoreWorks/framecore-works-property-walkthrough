@@ -17,8 +17,10 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 from _common import (
     PolishArgumentParser,
     atomic_write_json,
+    ensure_managed_directory,
     load_json,
     locked_project_mutation,
+    resolve_managed_output_path,
     resolve_project_path,
     sha256_file,
     utc_now,
@@ -344,9 +346,10 @@ def _render_target(
     width = int(config["width"])
     height = int(config["height"])
     inputs = _ordered_inputs(project_root, project)
-    final_dir = project_root / "final"
-    final_dir.mkdir(parents=True, exist_ok=True)
-    destination = final_dir / str(config["filename"])
+    final_dir = ensure_managed_directory(project_root, "final")
+    destination = resolve_managed_output_path(
+        project_root, Path("final") / str(config["filename"])
+    )
     dependency_hash = compute_render_dependency_hash(
         project_root, project, target, fps=fps
     )

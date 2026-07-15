@@ -189,6 +189,31 @@ class SemanticValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(DocumentValidationError, "nie może zostać użyte ponownie"):
             validate_document(document, self.scene_schema, "scene-plan")
 
+    def test_scene_id_i_sciezki_sa_przenosne_i_bez_traversal(self) -> None:
+        for scene_id in (
+            "../ucieczka",
+            "scn_../../ucieczka",
+            "scn_BACKSLASH12",
+            "scn_za-krotki",
+            "scn_123456789abc/extra",
+        ):
+            with self.subTest(scene_id=scene_id):
+                invalid = self._scene_plan()
+                invalid["scenes"][0]["scene_id"] = scene_id
+                with self.assertRaises(DocumentValidationError):
+                    validate_document(invalid, self.scene_schema, "scene-plan")
+
+        for source_path in (
+            "../salon.jpg",
+            "source-images\\salon.jpg",
+            "C:/source-images/salon.jpg",
+        ):
+            with self.subTest(source_path=source_path):
+                invalid = self._scene_plan()
+                invalid["scenes"][0]["source_path"] = source_path
+                with self.assertRaises(DocumentValidationError):
+                    validate_document(invalid, self.scene_schema, "scene-plan")
+
     def test_kanoniczny_profil_providera_nie_autoryzuje_generowania(self) -> None:
         unconfigured = load_json(
             ASSETS / "project-templates" / "provider-profile.snapshot.json"
@@ -212,7 +237,7 @@ class SemanticValidationTests(unittest.TestCase):
             },
             "official_sources": [
                 {
-                    "url": "https://docs.example.invalid/image-to-video",
+                    "url": "https://docs.example.com/image-to-video",
                     "purpose": "Kontrakt I2V",
                     "checked_at": utc_now(),
                 }

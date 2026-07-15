@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import ipaddress
 import json
 import os
 import re
@@ -18,6 +19,7 @@ from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, Iterator, Optional, Sequence, Union
+from urllib.parse import urlsplit
 
 try:
     import fcntl
@@ -161,6 +163,190 @@ def _path_is_within(path: Path, root: Path) -> bool:
     """Sprawdź relację ścieżek bez zależności od Path.is_relative_to."""
 
     return path == root or root in path.parents
+
+
+def _normalized_managed_candidate(
+    project_root: PathLike,
+    candidate: PathLike,
+) -> tuple[Path, Path, Path]:
+    """Znormalizuj ścieżkę docelową bez rozwijania dowiązań po drodze."""
+
+    root_input = Path(project_root).expanduser()
+    if root_input.is_symlink():
+        raise ProjectStateError("Katalog zarządzany nie może być dowiązaniem symbolicznym.")
+    root = root_input.resolve(strict=False)
+    if not root.exists() or not root.is_dir():
+        raise ProjectStateError(f"Katalog zarządzany nie istnieje: {root}")
+    candidate_input = Path(candidate).expanduser()
+    combined = candidate_input if candidate_input.is_absolute() else root / candidate_input
+    lexical = Path(os.path.abspath(str(combined)))
+    if not _path_is_within(lexical, root):
+        raise ProjectStateError("Ścieżka docelowa wychodzi poza katalog projektu.")
+    return root, lexical, lexical.relative_to(root)
+
+
+def _check_managed_directories(
+    root: Path,
+    parts: Sequence[str],
+    *,
+    create: bool,
+) -> Path:
+    """Sprawdź lub utwórz katalogi bez przechodzenia przez symlinki."""
+
+    current = root
+    for part in parts:
+        current = current / part
+        if current.is_symlink():
+            raise ProjectStateError(
+                f"Katalog docelowy nie może być dowiązaniem symbolicznym: {current}"
+            )
+        if current.exists():
+            if not current.is_dir():
+                raise ProjectStateError(
+                    f"Element ścieżki docelowej nie jest katalogiem: {current}"
+                )
+            continue
+        if not create:
+            # Nieistniejąca reszta ścieżki nie może jeszcze zawierać symlinka.
+            # Wywołujący może więc bezpiecznie zaplanować cel bez tworzenia
+            # pustych katalogów przed właściwym etapem publikacji.
+            break
+        try:
+            current.mkdir()
+        except OSError as exc:
+            raise ProjectStateError(
+                f"Nie można utworzyć bezpiecznego katalogu {current}: {exc}"
+            ) from exc
+        if current.is_symlink() or not current.is_dir():
+            raise ProjectStateError(
+                f"Utworzony element nie jest bezpiecznym katalogiem: {current}"
+            )
+    return current
+
+
+def resolve_managed_output_path(
+    project_root: PathLike,
+    candidate: PathLike,
+    *,
+    create_parent: bool = False,
+    must_exist: bool = False,
+) -> Path:
+    """Rozwiąż ścieżkę zapisu bez wyjścia przez symlink katalogu nadrzędnego.
+
+    Funkcja łączy kontrolę leksykalnej granicy projektu, kontrolę każdego
+    istniejącego katalogu nadrzędnego i kontrolę granicy po rozwinięciu ścieżki.
+    Dzięki temu wszystkie skrypty publikujące artefakty stosują ten sam kontrakt.
+    """
+
+    root, lexical, relative = _normalized_managed_candidate(project_root, candidate)
+    _check_managed_directories(root, relative.parts[:-1], create=create_parent)
+    if lexical.is_symlink():
+        raise ProjectStateError(
+            f"Plik docelowy nie może być dowiązaniem symbolicznym: {lexical}"
+        )
+    resolved = lexical.resolve(strict=False)
+    if not _path_is_within(resolved, root):
+        raise ProjectStateError("Ścieżka docelowa wychodzi poza katalog projektu.")
+    if must_exist and not lexical.exists():
+        raise ProjectStateError(f"Wymagana ścieżka nie istnieje: {lexical}")
+    return lexical
+
+
+def ensure_managed_directory(project_root: PathLike, candidate: PathLike) -> Path:
+    """Utwórz katalog projektu po bezpiecznej, niesymlinkowanej ścieżce."""
+
+    root, lexical, relative = _normalized_managed_candidate(project_root, candidate)
+    directory = _check_managed_directories(root, relative.parts, create=True)
+    if directory.resolve(strict=True) != lexical:
+        raise ProjectStateError("Katalog docelowy nie rozwiązuje się wewnątrz projektu.")
+    return directory
+
+
+def validate_public_http_url(value: str, *, https_only: bool = False) -> str:
+    """Sprawdź publiczny URL bez sieci i odrzuć lokalne reprezentacje hosta.
+
+    Walidacja jest celowo syntaktyczna. Nie wykonuje DNS, nie śledzi przekierowań
+    i nie obiecuje, że zdalny host pozostanie publiczny w chwili użycia.
+    """
+
+    if (
+        not isinstance(value, str)
+        or not value
+        or len(value) > 4096
+        or value != value.strip()
+    ):
+        raise ProjectStateError("URL musi być niepustym tekstem bez spacji brzegowych.")
+    if any(ord(character) < 32 or ord(character) == 127 for character in value):
+        raise ProjectStateError("URL zawiera niedozwolone znaki sterujące.")
+    try:
+        parsed = urlsplit(value)
+        port = parsed.port
+    except ValueError as exc:
+        raise ProjectStateError(f"URL ma niepoprawną składnię: {exc}") from exc
+
+    allowed_schemes = {"https"} if https_only else {"http", "https"}
+    if parsed.scheme.casefold() not in allowed_schemes or not parsed.hostname:
+        expected = "HTTPS" if https_only else "HTTP albo HTTPS"
+        raise ProjectStateError(f"URL musi być publicznym adresem {expected}.")
+    if parsed.username is not None or parsed.password is not None:
+        raise ProjectStateError("URL nie może zawierać danych logowania.")
+    if parsed.fragment:
+        raise ProjectStateError("URL nie może zawierać fragmentu.")
+    if port is not None and not (1 <= port <= 65535):
+        raise ProjectStateError("URL zawiera port spoza dozwolonego zakresu.")
+
+    hostname = parsed.hostname.casefold().rstrip(".")
+    if hostname != parsed.hostname.casefold():
+        raise ProjectStateError("URL nie może używać hosta zakończonego kropką.")
+    if hostname == "localhost" or hostname.endswith(".localhost"):
+        raise ProjectStateError("URL nie może wskazywać hosta lokalnego.")
+    local_use_suffixes = {
+        "corp",
+        "example",
+        "home",
+        "home.arpa",
+        "internal",
+        "invalid",
+        "lan",
+        "local",
+        "localdomain",
+        "onion",
+        "test",
+    }
+    if "." not in hostname or any(
+        hostname == suffix or hostname.endswith("." + suffix)
+        for suffix in local_use_suffixes
+    ):
+        raise ProjectStateError("URL nie może wskazywać hosta lokalnego ani intranetowego.")
+
+    try:
+        address = ipaddress.ip_address(hostname)
+    except ValueError:
+        address = None
+    if address is not None:
+        if not address.is_global:
+            raise ProjectStateError("URL nie może wskazywać niepublicznego adresu IP.")
+    else:
+        numeric_token = r"(?:0x[0-9a-f]+|[0-9]+)"
+        if re.fullmatch(r"[0-9.]+", hostname) or re.fullmatch(
+            rf"{numeric_token}(?:\.{numeric_token})*", hostname
+        ):
+            raise ProjectStateError("URL zawiera niekanoniczną liczbową postać hosta.")
+        try:
+            ascii_hostname = hostname.encode("idna").decode("ascii").casefold()
+        except UnicodeError as exc:
+            raise ProjectStateError("URL zawiera niepoprawną nazwę hosta.") from exc
+        labels = ascii_hostname.split(".")
+        if len(ascii_hostname) > 253 or any(
+            not label
+            or len(label) > 63
+            or re.fullmatch(r"[a-z0-9-]+", label) is None
+            or label.startswith("-")
+            or label.endswith("-")
+            for label in labels
+        ):
+            raise ProjectStateError("URL zawiera niepoprawne etykiety nazwy hosta.")
+    return value
 
 
 def resolve_project_path(
@@ -439,11 +625,14 @@ __all__ = [
     "SHA256_PATTERN",
     "ProjectStateError",
     "atomic_write_json",
+    "ensure_managed_directory",
     "load_json",
+    "resolve_managed_output_path",
     "resolve_project_path",
     "safe_slug",
     "sha256_file",
     "utc_now",
+    "validate_public_http_url",
     "validate_project_id",
     "validate_project_root",
 ]

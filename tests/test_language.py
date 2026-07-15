@@ -44,6 +44,7 @@ class TestLanguage(unittest.TestCase):
             "import_clips.py",
             "render_walkthrough.py",
             "validate_output.py",
+            "preflight_environment.py",
         )
         for name in names:
             with self.subTest(script=name):
