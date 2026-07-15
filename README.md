@@ -2,28 +2,71 @@
 
 [![CI](https://github.com/FrameCoreWorks/framecore-works-property-walkthrough/actions/workflows/ci.yml/badge.svg)](https://github.com/FrameCoreWorks/framecore-works-property-walkthrough/actions/workflows/ci.yml)
 
-Polskojęzyczny plugin ChatGPT/Codex prowadzący produkcję filmowej prezentacji
-nieruchomości od linku lub zdjęć do planu scen, promptów, kontroli jakości i,
-gdy środowisko ma wymagane narzędzia, finalnego MP4.
+Polskojęzyczny plugin ChatGPT/Codex do przygotowania filmowej prezentacji
+nieruchomości na podstawie linku do ogłoszenia albo zdjęć. Prowadzi użytkownika
+od zebrania materiałów, przez plan filmu i generowanie klipów, aż do kontroli
+jakości oraz finalnego MP4, jeżeli środowisko udostępnia potrzebne narzędzia.
 
-Repozytorium zawiera jeden plugin i jeden skill
-`$create-property-walkthrough`. Nie jest aplikacją SaaS, scraperem ani
-instalatorem systemowym. Nie bundluje dostawcy generowania, nie zmienia PATH i
-nie instaluje FFmpeg, modeli ani kluczy API.
+Repozytorium zawiera jeden plugin i jeden skill:
+`$create-property-walkthrough`.
 
-## Najważniejsze możliwości
+## Czym jest ten skill
 
-- link do pojedynczego ogłoszenia, wgrane JPEG/PNG, katalog, ZIP lub tryb hybrydowy,
-- bezpieczny projekt roboczy z provenance, SHA-256 i wznawialnym stanem,
-- analiza i selekcja zdjęć oraz arkusze kontaktowe,
-- zwykle 6–10 scen ze stabilnymi `scene_id`, jednym źródłem i jednym ruchem,
-- samodzielne prompty image-to-video po angielsku z polskimi metadanymi,
-- provider-neutral pakiet ręczny,
-- opcjonalna generacja przez connector, MCP albo API wybrane przez użytkownika,
-- jawna zgoda na upload, koszt i każdą płatną ponowną próbę,
-- append-only import klipów, techniczny i wizualny QC,
-- lokalny montaż 16:9 lub 9:16 z zaakceptowanych klipów,
-- kontrolowane wznowienie bez powtarzania ukończonych etapów.
+To kierownik procesu produkcji, a nie osobny model wideo. Porządkuje pracę,
+pilnuje kolejności etapów i przygotowuje wszystkie artefakty potrzebne do
+stworzenia filmu:
+
+```text
+ogłoszenie lub zdjęcia → brief → wybór ujęć → storyboard i prompty
+→ generacja albo import klipów → kontrola jakości → finalny MP4
+```
+
+Skill może:
+
+- przyjąć link do pojedynczego ogłoszenia, zdjęcia JPEG/PNG, katalog, ZIP albo
+  połączenie linku z własnymi zdjęciami,
+- rozpoznać pomieszczenia i wybrać materiały nadające się do filmu,
+- przygotować zwykle 6–10 scen, storyboard oraz samodzielne prompty
+  image-to-video,
+- utworzyć pakiet ręczny, który można wykorzystać w dowolnym zgodnym
+  generatorze,
+- użyć wskazanego przez użytkownika connectora, MCP albo API, jeżeli taka
+  integracja jest już dostępna w środowisku,
+- przyjąć gotowe klipy, wykonać ich techniczną i wizualną kontrolę jakości,
+- zmontować zaakceptowane klipy do filmu 16:9 lub 9:16,
+- wznowić istniejący projekt bez powtarzania poprawnie ukończonych etapów.
+
+Skill nie jest scraperem portali, aplikacją SaaS ani dostawcą generowania. Nie
+instaluje modeli, FFmpeg, kluczy API ani dodatkowych programów na urządzeniu
+użytkownika. Nie obchodzi logowania, CAPTCHA, paywalla ani zabezpieczeń
+anti-bot.
+
+## Dla kogo
+
+Skill jest przeznaczony dla osób, które mają zdjęcia lub ogłoszenie
+nieruchomości i chcą przygotować uporządkowaną prezentację wideo, między innymi
+dla pośredników, agentów nieruchomości, fotografów, deweloperów i zespołów
+marketingowych.
+
+Użytkownik dostarcza materiały, wybiera kierunek filmu i zatwierdza płatne
+operacje. Skill prowadzi analizę, planowanie, przygotowanie promptów, kontrolę
+stanu, QC oraz dostępny montaż.
+
+## Jak wygląda praca ze skillem
+
+1. Użytkownik podaje link, wgrywa zdjęcia albo przekazuje gotowe klipy.
+2. Skill ustala cel filmu, format, odbiorcę, styl i wezwanie do działania.
+3. Analizuje materiały i proponuje scenariusz, kolejność ujęć oraz storyboard.
+4. Pokazuje prompty i listę używanych materiałów do akceptacji.
+5. Użytkownik wybiera pracę bez generowania, montaż własnych klipów albo pełną
+   produkcję przez swoją integrację.
+6. Przed każdą płatną operacją skill pokazuje przewidywany koszt i prosi o
+   jednoznaczną zgodę.
+7. Po wygenerowaniu lub wgraniu klipów skill wykonuje QC i przygotowuje finalny
+   film, jeżeli środowisko pozwala na lokalny montaż.
+
+Scenariusz, storyboard, prompty i materiały są zatwierdzanymi etapami
+pośrednimi. Głównym rezultatem pełnej produkcji jest zmontowany plik MP4.
 
 ## Trzy tryby działania
 
@@ -43,14 +86,39 @@ priorytetu i sprawdzeniu bieżącej oficjalnej dokumentacji.
 Repo zawiera oficjalny manifest pluginu w `.codex-plugin/plugin.json` oraz
 repozytoryjny katalog marketplace w `.agents/plugins/marketplace.json`.
 
-### Codex CLI
+Do samej instalacji pluginu nie są potrzebne FFmpeg, klucz API ani konto u
+dostawcy wideo. Są one sprawdzane dopiero wtedy, gdy użytkownik wybiera etap,
+który rzeczywiście ich wymaga.
 
-Dodaj marketplace przypięty do tego wydania, a następnie zainstaluj plugin:
+### Codex CLI krok po kroku
 
-```bash
-codex plugin marketplace add FrameCoreWorks/framecore-works-property-walkthrough --ref v1.1.1
-codex plugin add framecore-works-property-walkthrough@framecore-works
-```
+Wymagany jest działający Codex CLI z obsługą pluginów.
+
+1. Dodaj marketplace FrameCore Works przypięty do zweryfikowanego wydania:
+
+   ```bash
+   codex plugin marketplace add FrameCoreWorks/framecore-works-property-walkthrough --ref v1.1.1
+   ```
+
+2. Zainstaluj plugin z dodanego marketplace:
+
+   ```bash
+   codex plugin add framecore-works-property-walkthrough@framecore-works
+   ```
+
+3. Sprawdź, czy Codex widzi zainstalowany plugin:
+
+   ```bash
+   codex plugin list --marketplace framecore-works
+   ```
+
+4. Uruchom nowe zadanie Codex i wywołaj skill jawnie przez
+   `$create-property-walkthrough`. W nowych zadaniach Codex może również dobrać
+   skill automatycznie, gdy polecenie dotyczy filmowej prezentacji
+   nieruchomości.
+
+Instalacja kopiuje wersjonowany plugin do cache Codexa. Nie kopiuje skilla
+ręcznie do folderów użytkownika i nie uruchamia instalatora systemowego.
 
 ### ChatGPT desktop
 
@@ -66,23 +134,38 @@ Instalacja pluginu również nie gwarantuje lokalnego Pythona ani FFmpeg w każd
 powierzchni ChatGPT. Skill sprawdza te możliwości przed etapem multimedialnym i
 uczciwie pozostaje w trybie planu lub pakietu ręcznego, gdy ich brakuje.
 
-## Szybki start
+Więcej informacji o mechanizmie dystrybucji zawiera oficjalna dokumentacja
+[pluginów Codex](https://learn.chatgpt.com/docs/plugins).
 
-Z linku:
+## Pierwsze uruchomienie
+
+Najprostsze polecenie startowe:
+
+```text
+Użyj $create-property-walkthrough. Chcę przygotować filmową prezentację
+nieruchomości. Najpierw ustal ze mną cel, format i tryb pracy. Nie uruchamiaj
+płatnej generacji bez pokazania kosztu i mojej jednoznacznej zgody.
+```
+
+Skill powinien zacząć od celu i dostępnych materiałów. Nie powinien na początku
+wymagać wyboru dostawcy. Jeżeli użytkownik nie ma jeszcze integracji, nadal może
+ukończyć analizę, storyboard, prompty i pakiet ręczny.
+
+### Start z linku
 
 ```text
 Użyj $create-property-walkthrough i przygotuj projekt prezentacji tej nieruchomości:
 <link do ogłoszenia>
 ```
 
-Ze zdjęć:
+### Start ze zdjęć
 
 ```text
 Użyj $create-property-walkthrough na wgranych zdjęciach. Przygotuj brief,
 storyboard, prompty i pakiet ręczny. Nie uruchamiaj płatnej generacji.
 ```
 
-Z gotowych klipów:
+### Start z gotowych klipów
 
 ```text
 Użyj $create-property-walkthrough, wznów projekt, zaimportuj klipy,
@@ -92,6 +175,101 @@ wykonaj QC i przygotuj finalny MP4.
 Przed generacją skill pokazuje zwięzłe podsumowanie celu, scenariusza,
 storyboardu, promptów i materiałów. Akceptacja kreatywna jest osobna od zgody
 na upload i koszt.
+
+## Podłączenie generowania przez MCP lub API
+
+Połączenie z generatorem jest potrzebne tylko w trybie `full_production`.
+Plugin nie narzuca dostawcy i nie zawiera uniwersalnego klienta do wszystkich
+usług. Użytkownik może wykorzystać istniejące MCP, connector albo zgodne
+narzędzie API dostępne w swoim środowisku.
+
+Samo ustawienie klucza API nie dodaje nowego narzędzia do Codexa. Musi istnieć
+również klient, komenda, plugin albo MCP, które potrafią użyć tego klucza i
+wywołać konkretną usługę.
+
+### Wariant 1: MCP w Codexie
+
+Najpierw sprawdź w oficjalnej dokumentacji wybranej usługi jej URL MCP, komendę
+serwera i sposób uwierzytelnienia. Następnie dodaj dokładnie tę integrację.
+
+Dla zdalnego serwera Streamable HTTP:
+
+```bash
+codex mcp add NAZWA_INTEGRACJI --url URL_MCP
+```
+
+Jeżeli serwer używa tokenu z prywatnej zmiennej środowiskowej:
+
+```bash
+codex mcp add NAZWA_INTEGRACJI --url URL_MCP --bearer-token-env-var NAZWA_ZMIENNEJ
+```
+
+Dla lokalnego serwera STDIO udostępnionego przez dostawcę:
+
+```bash
+codex mcp add NAZWA_INTEGRACJI -- POLECENIE_SERWERA ARGUMENTY
+```
+
+Jeżeli integracja używa OAuth, po jej dodaniu uruchom:
+
+```bash
+codex mcp login NAZWA_INTEGRACJI
+```
+
+Sprawdź konfigurację poleceniem:
+
+```bash
+codex mcp list
+```
+
+Po zmianie konfiguracji uruchom nowe zadanie Codex. W aplikacji desktopowej
+może być potrzebne ponowne uruchomienie. W aktywnym zadaniu można użyć `/mcp`,
+aby zobaczyć dostępne serwery i narzędzia. Konfigurację MCP współdzielą
+aplikacja ChatGPT desktop, Codex CLI i rozszerzenie IDE. ChatGPT w przeglądarce
+korzysta natomiast z pluginów i narzędzi udostępnionych w danym workspace, a
+nie z lokalnego pliku konfiguracyjnego Codexa.
+
+Szczegóły konfiguracji opisuje oficjalna dokumentacja
+[MCP w Codexie](https://learn.chatgpt.com/docs/extend/mcp).
+
+### Wariant 2: API dostawcy
+
+Nazwa klucza, endpointy, modele i format żądań zależą od konkretnego dostawcy.
+Użyj wyłącznie jego aktualnej oficjalnej dokumentacji. Klucz umieść w prywatnym
+mechanizmie sekretów albo w zmiennej środowiskowej bieżącej sesji terminala,
+nigdy w README, repozytorium, pliku projektu ani oknie rozmowy.
+
+Przykład dla macOS lub Linux, gdzie `PROVIDER_API_KEY` jest tylko nazwą
+zastępczą:
+
+```bash
+export PROVIDER_API_KEY="..."
+```
+
+Przykład dla Windows PowerShell:
+
+```powershell
+$env:PROVIDER_API_KEY="..."
+```
+
+Ustaw zmienną w tej samej sesji terminala przed uruchomieniem zadania Codex.
+Już otwarta aplikacja może wymagać ponownego uruchomienia, aby odziedziczyć
+zmienione środowisko. Następnie skonfiguruj zgodny klient lub narzędzie tak, aby
+odczytywało tę zmienną. Skillowi podaj wyłącznie nazwę dostawcy, metodę `API` i
+nazwę referencji do sekretu. Nie podawaj wartości klucza.
+
+### Polecenie po przygotowaniu integracji
+
+```text
+Użyj $create-property-walkthrough w trybie full_production. Mam już integrację
+NAZWA_INTEGRACJI przez MCP/API. Najpierw sprawdź jej aktualne możliwości,
+przygotuj batch, pokaż przewidywany koszt i poproś mnie o zgodę. Nie wysyłaj
+plików przed moim potwierdzeniem.
+```
+
+Po wskazaniu integracji skill sprawdza jej aktualną oficjalną dokumentację,
+obsługę image-to-video, formaty, czas klipów, sposób uwierzytelnienia i koszt.
+Nie wykonuje płatnego zadania jako testu połączenia.
 
 ## Linki do ogłoszeń i zdjęcia
 
