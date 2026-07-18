@@ -90,52 +90,120 @@ Do samej instalacji pluginu nie są potrzebne FFmpeg, klucz API ani konto u
 dostawcy wideo. Są one sprawdzane dopiero wtedy, gdy użytkownik wybiera etap,
 który rzeczywiście ich wymaga.
 
-### Codex CLI krok po kroku
+Codex oraz ChatGPT w trybie Work obsługują skille. W tym repozytorium skill
+`create-property-walkthrough` jest dystrybuowany wewnątrz pluginu, dzięki czemu
+host instaluje jego instrukcje i wszystkie pliki pomocnicze jako jeden
+wersjonowany pakiet.
 
-Wymagany jest działający Codex CLI z obsługą pluginów.
+Plugin można zainstalować na cztery sposoby. Codex Desktop i Codex CLI używają
+tego samego wersjonowanego pakietu, ale oferują inny interfejs instalacji.
+„Terminal” poniżej oznacza wariant bez interaktywnego katalogu pluginów.
 
-1. Dodaj marketplace FrameCore Works przypięty do zweryfikowanego wydania:
+### Codex Desktop na macOS lub Windows
+
+To zalecana ścieżka dla osób pracujących w aplikacji desktopowej.
+
+1. Sklonuj albo pobierz repozytorium do wybranego folderu na komputerze.
+2. Otwórz jego katalog główny w aplikacji ChatGPT i wybierz powierzchnię
+   **Codex** albo tryb **Work**.
+3. Uruchom aplikację ponownie. Codex wykryje repozytoryjny katalog
+   `.agents/plugins/marketplace.json`.
+4. Otwórz **Plugins**, wybierz źródło **FrameCore Works**, otwórz
+   **FrameCore Works Property Walkthrough** i wybierz przycisk instalacji.
+5. Po instalacji rozpocznij nowe zadanie, aby załadować skill.
+
+Gotowe polecenie do wklejenia w nowym zadaniu Codex Desktop:
+
+```text
+Zainstaluj w tym Codexie plugin z publicznego repozytorium:
+https://github.com/FrameCoreWorks/framecore-works-property-walkthrough
+
+Użyj oficjalnego wydania v1.1.1 i repozytoryjnego marketplace. Jeżeli repo jest
+już sklonowane, nie twórz drugiej kopii. Nie kopiuj skilla ręcznie, nie instaluj
+FFmpeg, modeli ani integracji API/MCP. Na końcu sprawdź, czy plugin jest
+zainstalowany i aktywny, oraz poinformuj mnie, czy trzeba ponownie uruchomić
+aplikację.
+```
+
+### Codex CLI z interaktywnym katalogiem pluginów
+
+Ta ścieżka używa tekstowego katalogu pluginów dostępnego bezpośrednio w sesji
+Codex CLI.
+
+1. Dodaj marketplace przypięty do zweryfikowanego wydania i uruchom Codex:
 
    ```bash
    codex plugin marketplace add FrameCoreWorks/framecore-works-property-walkthrough --ref v1.1.1
+   codex
    ```
 
-2. Zainstaluj plugin z dodanego marketplace:
+2. W uruchomionej sesji wpisz:
 
-   ```bash
-   codex plugin add framecore-works-property-walkthrough@framecore-works
+   ```text
+   /plugins
    ```
 
-3. Sprawdź, czy Codex widzi zainstalowany plugin:
+3. Wybierz marketplace **FrameCore Works**, otwórz plugin
+   **FrameCore Works Property Walkthrough** i zainstaluj go.
+4. Zakończ sesję i rozpocznij nową, aby załadować skill.
 
-   ```bash
-   codex plugin list --marketplace framecore-works
-   ```
+### Terminal bez interaktywnego katalogu
 
-4. Uruchom nowe zadanie Codex i wywołaj skill jawnie przez
-   `$create-property-walkthrough`. W nowych zadaniach Codex może również dobrać
-   skill automatycznie, gdy polecenie dotyczy filmowej prezentacji
-   nieruchomości.
+Ta ścieżka wykonuje całą instalację bezpośrednimi poleceniami i działa w
+terminalu na macOS, Linuxie oraz Windowsie, jeżeli polecenie `codex` jest
+dostępne w `PATH`.
 
-Instalacja kopiuje wersjonowany plugin do cache Codexa. Nie kopiuje skilla
-ręcznie do folderów użytkownika i nie uruchamia instalatora systemowego.
+```bash
+codex plugin marketplace add FrameCoreWorks/framecore-works-property-walkthrough --ref v1.1.1
+codex plugin add framecore-works-property-walkthrough@framecore-works
+codex plugin list --marketplace framecore-works
+```
 
-### ChatGPT desktop
+Ostatnie polecenie powinno pokazać plugin jako zainstalowany i włączony. Po
+instalacji uruchom nową sesję Codex.
 
-W ChatGPT desktop otwórz repozytorium w powierzchni Work lub Codex, uruchom
-ponownie aplikację, otwórz katalog Plugins, wybierz marketplace
-`FrameCore Works` i zainstaluj `FrameCore Works Property Walkthrough`.
+### ChatGPT w przeglądarce
 
-Samo wklejenie URL repozytorium do dowolnego wariantu ChatGPT nie jest
-gwarantowaną ścieżką instalacji. Dostępność katalogu pluginów zależy od
-powierzchni i polityk workspace.
+W ChatGPT web skille i pluginy są dostępne w trybie **Work**. Instalacja nie
+jest dostępna w zwykłym trybie **Chat**, aplikacji mobilnej ani rozszerzeniu
+IDE.
 
-Instalacja pluginu również nie gwarantuje lokalnego Pythona ani FFmpeg w każdej
-powierzchni ChatGPT. Skill sprawdza te możliwości przed etapem multimedialnym i
-uczciwie pozostaje w trybie planu lub pakietu ręcznego, gdy ich brakuje.
+1. Otwórz [ChatGPT](https://chatgpt.com), przełącz się na tryb **Work** i otwórz
+   [Plugins](https://chatgpt.com/plugins).
+2. Wybierz źródło osobiste albo udostępnione przez workspace i znajdź
+   **FrameCore Works Property Walkthrough**.
+3. Otwórz szczegóły pluginu i wybierz przycisk instalacji.
+4. Rozpocznij nowy czat. Wpisz `@` i wybierz plugin lub jego skill.
 
-Więcej informacji o mechanizmie dystrybucji zawiera oficjalna dokumentacja
-[pluginów Codex](https://learn.chatgpt.com/docs/plugins).
+Gotowe polecenie do wklejenia w ChatGPT web w trybie Work:
+
+```text
+Chcę zainstalować plugin z publicznego repozytorium:
+https://github.com/FrameCoreWorks/framecore-works-property-walkthrough
+
+Sprawdź, czy FrameCore Works Property Walkthrough jest dostępny w katalogu
+Plugins mojego trybu Work lub workspace. Jeżeli jest dostępny, przeprowadź mnie
+przez instalację i poproś o rozpoczęcie nowego czatu. Jeżeli ta powierzchnia nie
+pozwala na trwałą instalację z tego publicznego repozytorium, nie udawaj, że
+plugin został zainstalowany. Wyjaśnij, że marketplace musi zostać najpierw
+udostępniony w moim katalogu Plugins.
+```
+
+Samo wklejenie URL GitHuba do ChatGPT web nie jest
+gwarantowaną ścieżką instalacji. Publiczny katalog Plugins użytkownika,
+workspace albo udostępniony marketplace musi już zawierać ten plugin. Do
+testowania bez publikacji w katalogu najpewniejsze są Codex Desktop i Codex CLI z
+repozytoryjnym marketplace.
+
+Instalacja kopiuje wersjonowany plugin do zarządzanego środowiska hosta. Nie
+kopiuje skilla ręcznie do przypadkowych folderów i nie uruchamia instalatora
+systemowego. Nie gwarantuje również dostępności lokalnego Pythona ani FFmpeg.
+Skill sprawdza te możliwości dopiero przed etapem multimedialnym i pozostaje w
+trybie planu lub pakietu ręcznego, gdy ich brakuje.
+
+Więcej informacji zawiera oficjalna dokumentacja
+[pluginów ChatGPT i Codexa](https://learn.chatgpt.com/docs/plugins) oraz
+[budowania marketplace](https://learn.chatgpt.com/docs/build-plugins#build-your-own-curated-plugin-list).
 
 ## Pierwsze uruchomienie
 
@@ -306,9 +374,9 @@ wątku ani użytkownika i zapisuje tylko SHA-256 nonce.
 ## Montaż, audio i aranżacja
 
 Wbudowany backend FFmpeg służy do deterministycznego montażu zaakceptowanych
-klipów. Jeżeli środowisko udostępnia skille Remotion lub HyperFrames, workflow
-może użyć ich na polecenie użytkownika do bardziej rozbudowanych napisów,
-warstw i motion designu.
+klipów. Jeżeli dodatkowo zainstalowano Remotion lub HyperFrames, workflow może
+użyć ich na polecenie użytkownika do bardziej rozbudowanych napisów, warstw i
+motion designu.
 
 Lektor, muzyka i wirtualna aranżacja są opcjonalne. Skill proponuje decyzję, ale
 nie dodaje ich automatycznie. Aranżację zawsze oznacza jako wizualizację. Muzyka
