@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/FrameCoreWorks/framecore-works-property-walkthrough/actions/workflows/ci.yml/badge.svg)](https://github.com/FrameCoreWorks/framecore-works-property-walkthrough/actions/workflows/ci.yml)
 
+![Architektoniczny szkic procesu FrameCore Works Property Walkthrough](docs/assets/property-walkthrough-hero.png)
+
 Polskojęzyczny plugin ChatGPT/Codex do przygotowania filmowej prezentacji
 nieruchomości na podstawie linku do ogłoszenia albo zdjęć. Prowadzi użytkownika
 od zebrania materiałów, przez plan filmu i generowanie klipów, aż do kontroli
