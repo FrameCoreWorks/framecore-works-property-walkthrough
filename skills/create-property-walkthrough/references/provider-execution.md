@@ -36,8 +36,24 @@ Zatrzymaj submission do jawnego potwierdzenia ryzyka. Dodatkowo płatny retry wy
 
 Jeżeli bieżąca partia ma świeży zapisany profil providera i użytkownik
 potwierdził dokładny upload/generowanie oraz koszt, nie wracaj do pytań o
-dostawcę. Wykonaj pełny flow automatycznie: submission, polling, download,
-import klipów, QC i finalny render MP4, o ile host ma lokalny backend montażowy.
+dostawcę. Wykonaj flow generowania automatycznie: submission, polling, download,
+import klipów i QC. W trakcie tego etapu nie pytaj o styl montażu, plansze,
+Remotion ani HyperFrames.
+
+Po wygenerowaniu, pobraniu, imporcie i QC wszystkich klipów otwórz jeden
+pre-montage checkpoint przed finalnym renderem. W tym checkpointcie wolno zapytać
+tylko o:
+
+- sposób montażu zaakceptowanych klipów,
+- opcjonalną planszę początkową,
+- opcjonalną planszę końcową,
+- czy dostępne Remotion albo HyperFrames mają zostać użyte do plansz, motion
+  layerów albo bardziej graficznego montażu.
+
+Jeżeli użytkownik wybierze prosty montaż albo nie odpowie w zakresie
+niewymagającym decyzji, użyj FFmpeg i nie dodawaj plansz. Nie instaluj Remotion
+ani HyperFrames automatycznie. Nie uruchamiaj nowej zewnętrznej generacji tylko
+po to, aby stworzyć planszę.
 
 Zatrzymaj automatyzację tylko wtedy, gdy:
 

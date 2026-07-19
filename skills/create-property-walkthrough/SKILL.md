@@ -71,9 +71,10 @@ a raport `tools` potwierdza FFmpeg i ffprobe:
 6. Zapisz profil bez sekretów przez `scripts/configure_provider.py`; waliduj przez `scripts/validate_provider.py` bez generowania i przesyłania plików. Profil starszy niż 7 dni ma status `stale` i wymaga ponownej walidacji przed wykonaniem zewnętrznym.
 7. Przed wykonaniem przeczytaj [provider-execution.md](references/provider-execution.md), utwórz kryptograficznie losowy, efemeryczny nonce bieżącego zadania, zachowaj go tylko w aktywnym kontekście i przekaż jako `--session-nonce` do przygotowania oraz autoryzacji. Nie używaj prawdziwego ID wątku, użytkownika ani konta. W projekcie i zgodzie zapisuj wyłącznie SHA-256 nonce. Następnie pokaż pełne podsumowanie partii, przewidywany koszt albo status jego braku oraz zużycie kredytów, jeśli jest wiarygodnie dostępne.
 8. Zadaj dokładne pytanie o zgodę z reference i czekaj. Dla kosztu zadaj osobne dokładne pytanie. Milczenie, wcześniejsza zgoda i niejednoznaczna odpowiedź nie są zgodą. Świadome pominięcie limitu kosztu obowiązuje tylko w bieżącej sesji zadania.
-9. Po bieżącej zgodzie wykonuj provider flow automatycznie do MP4: submission, polling, download, import, QC i render. Zatrzymaj się tylko przy blockerze, niepewnym submission, zmianie fingerprintu, potrzebie dodatkowego kosztu, odrzuceniu wymagającym płatnego retry albo braku możliwości lokalnego montażu.
-10. Gdy zmieni się odcisk partii albo ponowna próba będzie dodatkowo płatna, uzyskaj nową zgodę.
-11. Zapisz identyfikator zadania natychmiast. Jeśli nie wiadomo, czy zadanie zostało wysłane, ustaw `submission_pending`, uzgodnij stan i nie wysyłaj go ponownie automatycznie.
+9. Po bieżącej zgodzie wykonuj provider flow automatycznie do zatwierdzonych klipów: submission, polling, download, import i QC. W trakcie tego etapu nie pytaj o montaż, plansze, Remotion ani HyperFrames. Zatrzymaj się tylko przy blockerze, niepewnym submission, zmianie fingerprintu, potrzebie dodatkowego kosztu albo odrzuceniu wymagającym płatnego retry.
+10. Po wygenerowaniu i QC klipów, ale przed finalnym montażem, zadaj pojedyncze pytanie o sposób montażu oraz opcjonalne plansze początkowe i końcowe. Remotion albo HyperFrames rozważaj tylko dla tych plansz, motion layerów i bardziej graficznego montażu, jeśli środowisko je udostępnia albo użytkownik je wskazuje. Nie instaluj ich automatycznie.
+11. Po decyzji montażowej renderuj finalny MP4. Gdy zmieni się odcisk partii albo ponowna próba będzie dodatkowo płatna, uzyskaj nową zgodę.
+12. Zapisz identyfikator zadania natychmiast. Jeśli nie wiadomo, czy zadanie zostało wysłane, ustaw `submission_pending`, uzgodnij stan i nie wysyłaj go ponownie automatycznie.
 
 ## Importuj, oceń i renderuj
 
@@ -81,10 +82,11 @@ a raport `tools` potwierdza FFmpeg i ffprobe:
 2. Przeczytaj [quality-control.md](references/quality-control.md). Uruchom ffprobe i przygotuj próbki klatek. Porównaj je z zaakceptowanym źródłem.
 3. Zapisz status `approved`, `regenerate`, `rejected` albo `needs-manual-review`. Ustaw porównanie ze źródłem na wykonane tylko po rzeczywistym porównaniu i dołącz krótki opis dowodu.
 4. Przy regeneracji unieważnij wyłącznie scenę i zależny render. Zachowaj zaakceptowane klipy innych scen.
-5. Przeczytaj [rendering.md](references/rendering.md) i uruchom `scripts/render_walkthrough.py` wyłącznie dla zaakceptowanych klipów.
-6. Utwórz 16:9 oraz 9:16 tylko gdy wymagany. Nie rozciągaj obrazu. Nie dodawaj automatycznie audio, logo, adresu ani danych osobowych.
-7. Gdy użytkownik chce lektora, muzykę, wirtualną aranżację albo zewnętrzny backend montażowy, przeczytaj [audio-and-music.md](references/audio-and-music.md) i [editing-backends.md](references/editing-backends.md). Proponuj te elementy, ale wykonuj je tylko po decyzji użytkownika. Wirtualną aranżację zawsze oznacz jako wizualizację.
-8. Uruchom `scripts/validate_output.py`, wykonaj techniczny i wizualny QA oraz zastosuj [final-delivery.md](references/final-delivery.md). Głównym rezultatem produkcyjnym jest zmontowany MP4, a plan i prompty są zatwierdzanymi artefaktami pośrednimi.
+5. Przeczytaj [editing-backends.md](references/editing-backends.md) i wykonaj pre-montage checkpoint: wybór prostego montażu FFmpeg albo montażu z dostępnym Remotion/HyperFrames oraz decyzja, czy dodać planszę początkową, końcową albo obie.
+6. Przeczytaj [rendering.md](references/rendering.md) i uruchom `scripts/render_walkthrough.py` wyłącznie dla zaakceptowanych klipów, chyba że użytkownik wybrał dostępny backend Remotion/HyperFrames.
+7. Utwórz 16:9 oraz 9:16 tylko gdy wymagany. Nie rozciągaj obrazu. Nie dodawaj automatycznie audio, logo, adresu ani danych osobowych.
+8. Gdy użytkownik chce lektora, muzykę albo wirtualną aranżację, przeczytaj [audio-and-music.md](references/audio-and-music.md). Proponuj te elementy, ale wykonuj je tylko po decyzji użytkownika. Wirtualną aranżację zawsze oznacz jako wizualizację.
+9. Uruchom `scripts/validate_output.py`, wykonaj techniczny i wizualny QA oraz zastosuj [final-delivery.md](references/final-delivery.md). Głównym rezultatem produkcyjnym jest zmontowany MP4, a plan i prompty są zatwierdzanymi artefaktami pośrednimi.
 
 ## Wznawiaj bez powtarzania pracy
 

@@ -13,9 +13,10 @@
 9. Zawsze wygeneruj ręczny pakiet promptów.
 10. Tylko w `full_production` sprawdź zapisany profil integracji. Świeży profil `validated` użyj automatycznie; pytaj o dostawcę tylko przy braku profilu, stanie `stale`/`blocked` albo jawnej prośbie o zmianę.
 11. Przejdź przez aktualne bramki zgody i kosztu dla bieżącej partii.
-12. Po zgodzie wykonaj zewnętrzne generowanie automatycznie do importu klipów, QC i dostępnego renderu MP4.
-13. Regeneruj wyłącznie nieudane lub unieważnione sceny po nowej zgodzie, gdy jest wymagana.
-14. Zmontuj zaakceptowane klipy i zwaliduj finalny MP4, jeżeli host udostępnia backend montażowy.
+12. Po zgodzie wykonaj zewnętrzne generowanie automatycznie do importu klipów i QC. Nie pytaj w tym czasie o montaż, plansze, Remotion ani HyperFrames.
+13. Po QC klipów wykonaj pre-montage checkpoint: zapytaj tylko o sposób montażu oraz opcjonalne plansze początkowe/końcowe, które mogą powstać w dostępnym Remotion albo HyperFrames.
+14. Regeneruj wyłącznie nieudane lub unieważnione sceny po nowej zgodzie, gdy jest wymagana.
+15. Zmontuj zaakceptowane klipy i zwaliduj finalny MP4, jeżeli host udostępnia backend montażowy.
 
 ## Statusy etapów
 

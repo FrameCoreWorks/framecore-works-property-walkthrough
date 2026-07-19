@@ -66,8 +66,12 @@ stanu, QC oraz dostępny montaż.
    automatycznie i nie pyta ponownie o dostawcę.
 7. Przed każdą płatną operacją skill pokazuje przewidywany koszt i prosi o
    jednoznaczną zgodę dla bieżącej partii materiałów.
-8. Po wygenerowaniu lub wgraniu klipów skill wykonuje QC i przygotowuje finalny
-   film, jeżeli środowisko pozwala na lokalny montaż.
+8. Po wygenerowaniu lub wgraniu klipów skill wykonuje QC.
+9. Dopiero po QC pyta o sposób montażu oraz opcjonalne plansze początkowe lub
+   końcowe, które mogą zostać przygotowane przez dostępny Remotion albo
+   HyperFrames.
+10. Po tej decyzji przygotowuje finalny film, jeżeli środowisko pozwala na
+    lokalny montaż.
 
 Scenariusz, storyboard, prompty i materiały są zatwierdzanymi etapami
 pośrednimi. Głównym rezultatem pełnej produkcji jest zmontowany plik MP4.
@@ -357,8 +361,9 @@ Użyj $create-property-walkthrough w trybie full_production dla tej nieruchomoś
 
 Użyj zapisanego profilu dostawcy, jeżeli jest świeży. Nie pytaj ponownie
 o dostawcę ani metodę połączenia. Przygotuj sceny, pokaż koszt i zakres
-materiałów, poproś o zgodę dla bieżącego batcha, a po zgodzie wygeneruj klipy,
-wykonaj QC i zmontuj finalny MP4.
+materiałów, poproś o zgodę dla bieżącego batcha, a po zgodzie wygeneruj klipy
+bez dalszych pytań. Po QC klipów zapytaj tylko o sposób montażu oraz opcjonalne
+plansze początkowe lub końcowe. Następnie zmontuj finalny MP4.
 ```
 
 Po wskazaniu integracji skill sprawdza jej aktualną oficjalną dokumentację,
@@ -401,9 +406,13 @@ wątku ani użytkownika i zapisuje tylko SHA-256 nonce.
 ## Montaż, audio i aranżacja
 
 Wbudowany backend FFmpeg służy do deterministycznego montażu zaakceptowanych
-klipów. Jeżeli dodatkowo zainstalowano Remotion lub HyperFrames, workflow może
-użyć ich na polecenie użytkownika do bardziej rozbudowanych napisów, warstw i
-motion designu.
+klipów. Pytanie o montaż pojawia się dopiero po wygenerowaniu, imporcie i QC
+klipów. Wtedy skill może zapytać o prosty montaż FFmpeg albo bardziej graficzny
+montaż oraz opcjonalne plansze początkowe i końcowe.
+
+Jeżeli dodatkowo zainstalowano Remotion lub HyperFrames, workflow może użyć ich
+po tym checkpointcie do plansz, typografii, warstw i motion designu. Nie używa
+ich w trakcie samego generowania klipów i nie instaluje ich automatycznie.
 
 Lektor, muzyka i wirtualna aranżacja są opcjonalne. Skill proponuje decyzję, ale
 nie dodaje ich automatycznie. Aranżację zawsze oznacza jako wizualizację. Muzyka

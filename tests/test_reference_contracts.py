@@ -40,6 +40,22 @@ class TestReferenceContracts(unittest.TestCase):
         self.assertIn("submission, polling, download", tekst)
         self.assertIn("Nie zastępuje", tekst)
 
+    def test_checkpoint_montazowy_jest_po_generowaniu_i_qc(self):
+        provider = (REFERENCES / "provider-execution.md").read_text(encoding="utf-8")
+        editing = (REFERENCES / "editing-backends.md").read_text(encoding="utf-8")
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        for tekst in (provider, editing, skill, readme):
+            self.assertIn("Po wygenerowaniu", tekst)
+            self.assertIn("QC", tekst)
+        self.assertIn("nie pytaj o styl montażu, plansze", provider)
+        self.assertIn("Pre-montage checkpoint", editing)
+        self.assertIn("planszę początkową", editing)
+        self.assertIn("planszę końcową", editing)
+        self.assertIn("Remotion albo HyperFrames", editing)
+        self.assertIn("nie instaluj", editing.lower())
+
     def test_provider_references_nie_zawieraja_endpointow(self):
         tekst = "\n".join(
             (REFERENCES / nazwa).read_text(encoding="utf-8")
