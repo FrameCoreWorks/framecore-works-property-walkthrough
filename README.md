@@ -62,9 +62,11 @@ stanu, QC oraz dostępny montaż.
 4. Pokazuje prompty i listę używanych materiałów do akceptacji.
 5. Użytkownik wybiera pracę bez generowania, montaż własnych klipów albo pełną
    produkcję przez swoją integrację.
-6. Przed każdą płatną operacją skill pokazuje przewidywany koszt i prosi o
-   jednoznaczną zgodę.
-7. Po wygenerowaniu lub wgraniu klipów skill wykonuje QC i przygotowuje finalny
+6. Jeżeli wcześniej zapisano świeży profil integracji, skill używa go
+   automatycznie i nie pyta ponownie o dostawcę.
+7. Przed każdą płatną operacją skill pokazuje przewidywany koszt i prosi o
+   jednoznaczną zgodę dla bieżącej partii materiałów.
+8. Po wygenerowaniu lub wgraniu klipów skill wykonuje QC i przygotowuje finalny
    film, jeżeli środowisko pozwala na lokalny montaż.
 
 Scenariusz, storyboard, prompty i materiały są zatwierdzanymi etapami
@@ -82,6 +84,11 @@ Skill wykrywa możliwości hosta i nie pyta o dostawcę na starcie. Integracja
 pojawia się dopiero wtedy, gdy użytkownik wybiera zewnętrzną generację.
 Konkretne usługi są rekomendowane wyłącznie na jawną prośbę, po ustaleniu
 priorytetu i sprawdzeniu bieżącej oficjalnej dokumentacji.
+
+Po jednorazowym skonfigurowaniu i zwalidowaniu integracji skill zapamiętuje
+profil wykonawczy bez sekretów. Przy kolejnych projektach `full_production`
+używa świeżego profilu automatycznie, bez ponownego pytania o dostawcę. Nadal
+pokazuje zakres uploadu, koszt i wymaga bieżącej zgody dla konkretnego batcha.
 
 ## Instalacja
 
@@ -221,6 +228,11 @@ Skill powinien zacząć od celu i dostępnych materiałów. Nie powinien na pocz
 wymagać wyboru dostawcy. Jeżeli użytkownik nie ma jeszcze integracji, nadal może
 ukończyć analizę, storyboard, prompty i pakiet ręczny.
 
+Jeżeli integracja była już skonfigurowana i profil jest świeży, przy następnym
+uruchomieniu skill powinien powiedzieć, którego zapisanego dostawcy użyje, a
+następnie przejść do przygotowania scen, wyceny i zgody na bieżący batch. Nie
+powinien ponownie pytać, czy użytkownik chce MCP albo API.
+
 ### Start z linku
 
 ```text
@@ -337,6 +349,18 @@ przygotuj batch, pokaż przewidywany koszt i poproś mnie o zgodę. Nie wysyłaj
 plików przed moim potwierdzeniem.
 ```
 
+### Kolejne projekty po skonfigurowaniu integracji
+
+```text
+Użyj $create-property-walkthrough w trybie full_production dla tej nieruchomości:
+<link albo wgrane zdjęcia>
+
+Użyj zapisanego profilu dostawcy, jeżeli jest świeży. Nie pytaj ponownie
+o dostawcę ani metodę połączenia. Przygotuj sceny, pokaż koszt i zakres
+materiałów, poproś o zgodę dla bieżącego batcha, a po zgodzie wygeneruj klipy,
+wykonaj QC i zmontuj finalny MP4.
+```
+
 Po wskazaniu integracji skill sprawdza jej aktualną oficjalną dokumentację,
 obsługę image-to-video, formaty, czas klipów, sposób uwierzytelnienia i koszt.
 Nie wykonuje płatnego zadania jako testu połączenia.
@@ -362,7 +386,8 @@ nigdy nie trafiają do repozytorium ani projektu.
 
 Przed płatnym wykonaniem skill:
 
-1. wykonuje szybki fact-check aktualnej integracji,
+1. używa świeżego zapisanego profilu albo wykonuje szybki fact-check wskazanej
+   integracji, gdy profilu jeszcze nie ma lub wymaga odświeżenia,
 2. pokazuje pliki, sceny, model, format i czas,
 3. pokazuje przewidywany koszt i zużycie kredytów, gdy są wiarygodnie dostępne,
 4. wymaga osobnej, jednoznacznej zgody na upload i generowanie,

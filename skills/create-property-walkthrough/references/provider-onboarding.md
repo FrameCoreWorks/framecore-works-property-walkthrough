@@ -12,6 +12,31 @@ ustal cel projektu i wybierz tryb:
 Provider jest potrzebny wyłącznie w trzecim trybie i tylko wtedy, gdy host nie
 ma już odpowiedniego, jawnie wybranego narzędzia generacyjnego.
 
+## Automatyczne użycie zapisanego profilu
+
+Przy każdym nowym projekcie `full_production` najpierw sprawdź lokalny profil
+`$CODEX_HOME/state/create-property-walkthrough/provider-profile.json` przez
+`scripts/validate_provider.py`.
+
+Jeżeli raport zwraca `provider_reuse_allowed=true` i
+`next_run_provider_action=reuse_validated_profile_after_batch_consent`, użyj
+tego profilu automatycznie. Powiedz tylko zwięźle:
+
+> Używam zapisanego profilu dostawcy: <nazwa> przez <MCP/API>.
+
+Nie pytaj ponownie o dostawcę, metodę połączenia ani rekomendacje. Nie pokazuj
+listy alternatyw, chyba że użytkownik jawnie prosi o zmianę integracji, reset
+profilu albo rekomendację.
+
+Jeżeli profil nie istnieje, jest `not_configured`, `pending_validation`,
+`stale` albo `blocked`, zatrzymaj automatyczne wykonanie i przejdź do
+wyjaśnienia połączenia. Profil `stale` wymaga ponownej walidacji tego samego
+dostawcy, nie wyboru zamiennika.
+
+Zapamiętany profil jest preferencją wykonawczą, nie zgodą na generowanie. Nie
+upoważnia do uploadu, płatnego submission, retry ani zmiany zakresu materiałów.
+Te zgody są zawsze osobne i bieżące dla konkretnej partii.
+
 ## Wyjaśnij połączenie ogólnie
 
 Powiedz zwięźle, że generowanie może korzystać z connectora, MCP albo API

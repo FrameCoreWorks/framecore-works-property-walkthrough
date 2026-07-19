@@ -11,10 +11,11 @@
 7. Przeanalizuj zdjęcia i zapisz wynik zgodny ze schematem.
 8. Wybierz źródła i przygotuj stabilny plan scen.
 9. Zawsze wygeneruj ręczny pakiet promptów.
-10. Tylko w `full_production` przejdź przez onboarding wybranej integracji oraz aktualne bramki zgody i kosztu.
-11. Zaimportuj klipy, wykonaj techniczne i wizualne QC.
-12. Regeneruj wyłącznie nieudane lub unieważnione sceny po nowej zgodzie, gdy jest wymagana.
-13. Zmontuj zaakceptowane klipy i zwaliduj finalny MP4, jeżeli host udostępnia backend montażowy.
+10. Tylko w `full_production` sprawdź zapisany profil integracji. Świeży profil `validated` użyj automatycznie; pytaj o dostawcę tylko przy braku profilu, stanie `stale`/`blocked` albo jawnej prośbie o zmianę.
+11. Przejdź przez aktualne bramki zgody i kosztu dla bieżącej partii.
+12. Po zgodzie wykonaj zewnętrzne generowanie automatycznie do importu klipów, QC i dostępnego renderu MP4.
+13. Regeneruj wyłącznie nieudane lub unieważnione sceny po nowej zgodzie, gdy jest wymagana.
+14. Zmontuj zaakceptowane klipy i zwaliduj finalny MP4, jeżeli host udostępnia backend montażowy.
 
 ## Statusy etapów
 

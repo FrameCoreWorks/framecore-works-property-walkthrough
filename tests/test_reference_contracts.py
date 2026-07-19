@@ -22,6 +22,9 @@ class TestReferenceContracts(unittest.TestCase):
         for mode in ("plan_only", "manual_clips", "full_production"):
             self.assertIn(mode, tekst)
         self.assertIn("Nie pytaj o dostawcę podczas zwykłego startu", tekst)
+        self.assertIn("provider_reuse_allowed=true", tekst)
+        self.assertIn("Używam zapisanego profilu dostawcy", tekst)
+        self.assertIn("nie pytaj ponownie o dostawcę", tekst.lower())
         self.assertIn("Jeżeli użytkownik jawnie prosi", tekst)
         self.assertIn("zapytaj o jeden główny priorytet", tekst)
         self.assertIn("najwyżej trzy", tekst)
@@ -33,6 +36,9 @@ class TestReferenceContracts(unittest.TestCase):
         self.assertIn(COST_UNKNOWN, tekst)
         self.assertIn("`--session-nonce`", tekst)
         self.assertIn("Nie używa prawdziwego identyfikatora wątku", tekst)
+        self.assertIn("Automatyczne wykonanie po zgodzie", tekst)
+        self.assertIn("submission, polling, download", tekst)
+        self.assertIn("Nie zastępuje", tekst)
 
     def test_provider_references_nie_zawieraja_endpointow(self):
         tekst = "\n".join(

@@ -212,6 +212,15 @@ def validate_profile_data(
         "provider_name": name,
         "connection_method": profile["connection_method"],
         "status": profile.get("status"),
+        "provider_reuse_allowed": bool(
+            require_verified and profile.get("status") == "validated"
+        ),
+        "next_run_provider_action": (
+            "reuse_validated_profile_after_batch_consent"
+            if require_verified and profile.get("status") == "validated"
+            else "ask_user_for_provider_or_validation"
+        ),
+        "automatic_submission_allowed": False,
         "generation_performed": False,
         "network_access_performed": False,
     }

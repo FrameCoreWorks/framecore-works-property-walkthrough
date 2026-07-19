@@ -32,6 +32,25 @@ Jeżeli koszt nie został zweryfikowany, napisz dokładnie:
 
 Zatrzymaj submission do jawnego potwierdzenia ryzyka. Dodatkowo płatny retry wymaga nowej zgody kosztowej.
 
+## Automatyczne wykonanie po zgodzie
+
+Jeżeli bieżąca partia ma świeży zapisany profil providera i użytkownik
+potwierdził dokładny upload/generowanie oraz koszt, nie wracaj do pytań o
+dostawcę. Wykonaj pełny flow automatycznie: submission, polling, download,
+import klipów, QC i finalny render MP4, o ile host ma lokalny backend montażowy.
+
+Zatrzymaj automatyzację tylko wtedy, gdy:
+
+- zmienił się fingerprint partii, profilu, modelu, scen, assetów, kosztu albo
+  nonce bieżącej sesji,
+- potrzebny byłby dodatkowy płatny retry,
+- nie wiadomo, czy submission został wykonany,
+- provider zwrócił błąd wymagający decyzji użytkownika,
+- lokalny import, QC albo render nie może bezpiecznie kontynuować.
+
+Zapamiętany profil providera zmniejsza liczbę pytań o konfigurację. Nie zastępuje
+aktualnej zgody na batch i koszt.
+
 ## Upload derivatives
 
 Przygotuj osobne pliki bez metadanych. Zapisz ich hashe, źródłowe hashe, zakres praw, PII flags i przeznaczenie. Nie podstawiaj originals. Wyklucz `.env`, sekrety, Memory Cache, unrelated files i AppleDouble.

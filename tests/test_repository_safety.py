@@ -8,6 +8,9 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "skills" / "create-property-walkthrough" / "scripts"
+DOZWOLONE_ASSETY_DOKUMENTACYJNE = {
+    "docs/assets/property-walkthrough-hero.png",
+}
 
 
 class TestRepositorySafety(unittest.TestCase):
@@ -17,10 +20,15 @@ class TestRepositorySafety(unittest.TestCase):
         for sciezka in ROOT.rglob("*"):
             if not sciezka.is_file():
                 continue
+            relatywna = str(sciezka.relative_to(ROOT))
             if sciezka.name.startswith("._"):
-                znalezione.append(str(sciezka.relative_to(ROOT)))
-            if sciezka.suffix.lower() in zakazane and sciezka.name != ".env.example":
-                znalezione.append(str(sciezka.relative_to(ROOT)))
+                znalezione.append(relatywna)
+            if (
+                sciezka.suffix.lower() in zakazane
+                and sciezka.name != ".env.example"
+                and relatywna not in DOZWOLONE_ASSETY_DOKUMENTACYJNE
+            ):
+                znalezione.append(relatywna)
         self.assertEqual([], znalezione)
 
     def test_helpery_nie_importuja_powierzchni_sieciowych(self):

@@ -162,6 +162,38 @@ class ProviderOnboardingTests(unittest.TestCase):
         self.assertFalse(report["network_access_performed"])
         self.assertEqual("validated", load_json(snapshot_path)["status"])
 
+    def test_validated_profile_is_reused_without_authorizing_submission(self) -> None:
+        profile_path = self.base / "provider-profile.json"
+        atomic_write_json(profile_path, validated_profile_data("Stały Dostawca"))
+
+        report = validate_profile_file(profile_path)
+
+        self.assertTrue(report["provider_reuse_allowed"])
+        self.assertEqual(
+            "reuse_validated_profile_after_batch_consent",
+            report["next_run_provider_action"],
+        )
+        self.assertFalse(report["automatic_submission_allowed"])
+        self.assertFalse(load_json(profile_path)["generation_authorized"])
+
+    def test_pending_profile_still_requires_provider_validation(self) -> None:
+        profile_path = self.base / "provider-profile.json"
+        configure_provider(
+            "Stały Dostawca",
+            "API",
+            "env:TEST_PROVIDER_KEY",
+            output_path=profile_path,
+        )
+
+        report = validate_profile_file(profile_path)
+
+        self.assertFalse(report["provider_reuse_allowed"])
+        self.assertEqual(
+            "ask_user_for_provider_or_validation",
+            report["next_run_provider_action"],
+        )
+        self.assertFalse(report["automatic_submission_allowed"])
+
     def test_profile_rejects_secret_field_and_wrong_named_provider(self) -> None:
         profile = validated_profile_data()
         profile["api_key"] = "sekret-testowy-canary"
